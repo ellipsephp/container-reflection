@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Pmall\Container;
+namespace Ellipse\Container;
 
 class DefaultValue
 {

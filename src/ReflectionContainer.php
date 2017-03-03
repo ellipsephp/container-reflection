@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Pmall\Container;
+namespace Ellipse\Container;
 
 use ReflectionClass;
 use ReflectionMethod;
@@ -9,7 +9,7 @@ use ReflectionParameter;
 
 use Acclimate\Container\Decorator\AbstractContainerDecorator;
 
-use Pmall\Container\Exceptions\NoValueDefinedForParameterException;
+use Ellipse\Container\Exceptions\NoValueDefinedForParameterException;
 
 class ReflectionContainer extends AbstractContainerDecorator
 {
@@ -105,7 +105,7 @@ class ReflectionContainer extends AbstractContainerDecorator
      * @param array $parameters
      * @param array $overrides
      * @return array
-     * @throws \Pmall\Container\Exceptions\NoValueDefinedForParameterException
+     * @throws \Ellipse\Container\Exceptions\NoValueDefinedForParameterException
      */
     private function getResolvedParameters(array $parameters, array $overrides): array
     {

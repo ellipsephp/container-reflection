@@ -2,9 +2,9 @@
 
 use Interop\Container\ContainerInterface;
 
-use Pmall\Container\ReflectionContainer;
-use Pmall\Container\DefaultValue;
-use Pmall\Container\Exceptions\NoValueDefinedForParameterException;
+use Ellipse\Container\ReflectionContainer;
+use Ellipse\Container\DefaultValue;
+use Ellipse\Container\Exceptions\NoValueDefinedForParameterException;
 
 class DummyArg1
 {

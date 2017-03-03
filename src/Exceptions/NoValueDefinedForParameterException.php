@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Pmall\Container\Exceptions;
+namespace Ellipse\Container\Exceptions;
 
 use RuntimeException;
 use ReflectionParameter;
