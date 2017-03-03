@@ -13,6 +13,13 @@ use Pmall\Container\Exceptions\NoValueDefinedForParameterException;
 
 class ReflectionContainer extends AbstractContainerDecorator
 {
+    /**
+     * Make an instance of the given class.
+     *
+     * @param string $class
+     * @param array  $overrides
+     * @return mixed
+     */
     public function make(string $class, array $overrides)
     {
         $reflection = new ReflectionClass($class);
@@ -26,6 +33,14 @@ class ReflectionContainer extends AbstractContainerDecorator
         return $reflection->newInstanceArgs($values);
     }
 
+    /**
+     * Execute a callable with the given overrides as parameters. Retrieve the
+     * remaining parameters from the container.
+     *
+     * @param callable  $callable
+     * @param array     $overrides
+     * @return mixed
+     */
     public function call(callable $callable, array $overrides)
     {
         if (is_string($callable) and strpos($callable, '::') !== false) {
@@ -53,7 +68,13 @@ class ReflectionContainer extends AbstractContainerDecorator
         return $reflection->invokeArgs($instance, $values);
     }
 
-    private function getNamedOverrides(array $overrides)
+    /**
+     * Return the values which have a named key.
+     *
+     * @param array $overrides
+     * @return array
+     */
+    private function getNamedOverrides(array $overrides): array
     {
         return array_filter($overrides, function ($key) {
 
@@ -62,7 +83,13 @@ class ReflectionContainer extends AbstractContainerDecorator
         }, ARRAY_FILTER_USE_KEY);
     }
 
-    private function getDefaultsOverrides(array $overrides)
+    /**
+     * Return the values which doesn't have a named key.
+     *
+     * @param array $overrides
+     * @return array
+     */
+    private function getDefaultsOverrides(array $overrides): array
     {
         return array_filter($overrides, function ($key) {
 
@@ -71,7 +98,16 @@ class ReflectionContainer extends AbstractContainerDecorator
         }, ARRAY_FILTER_USE_KEY);
     }
 
-    private function getResolvedParameters(array $parameters, array $overrides)
+    /**
+     * Resolve the list of values to use as parameters from the given list of
+     * reflection parameters and the given overrides.
+     *
+     * @param array $parameters
+     * @param array $overrides
+     * @return array
+     * @throws \Pmall\Container\Exceptions\NoValueDefinedForParameterException
+     */
+    private function getResolvedParameters(array $parameters, array $overrides): array
     {
         $named = $this->getNamedOverrides($overrides);
         $defaults = $this->getDefaultsOverrides($overrides);
