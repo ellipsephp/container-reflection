@@ -30,12 +30,13 @@ class DummyClass
 {
     private $parameters = [];
 
-    public function __construct(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4)
+    public function __construct(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5)
     {
         $this->parameters[] = $arg1;
         $this->parameters[] = $arg2;
         $this->parameters[] = $arg3;
         $this->parameters[] = $arg4;
+        $this->parameters[] = $arg5;
     }
 
     public function getParameters()
@@ -46,9 +47,9 @@ class DummyClass
 
 class DummyClassStatic
 {
-    static public function getInstance(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4)
+    static public function getInstance(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5)
     {
-        return new DummyClass($arg1, $arg2, $arg3, $arg4);
+        return new DummyClass($arg1, $arg2, $arg3, $arg4, $arg5);
     }
 }
 
@@ -69,6 +70,7 @@ describe('ReflectionContainer', function () {
             $arg2 = new DummyArg2('arg2');
             $arg3 = 'arg3';
             $arg4 = 'arg4';
+            $arg5 = 'arg5';
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
@@ -76,13 +78,15 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->make(DummyClass::class, [
                 DummyArg2::class => $arg2,
+            ], [
+                'arg5' => $arg5,
                 new DefaultValue,
                 $arg4,
             ]);
 
             $parameters = $test->getParameters();
 
-            expect($parameters)->to->be->equal([$arg1, $arg2, $arg3, $arg4]);
+            expect($parameters)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
 
         });
 
@@ -116,24 +120,27 @@ describe('ReflectionContainer', function () {
             $arg2 = new DummyArg2('arg2');
             $arg3 = 'arg3';
             $arg4 = 'arg4';
+            $arg5 = 'arg5';
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
                 ->andReturn($arg1);
 
-            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4) {
+            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5) {
 
-                return [$arg1, $arg2, $arg3, $arg4];
+                return [$arg1, $arg2, $arg3, $arg4, $arg5];
 
             };
 
             $test = $this->container->call($cb, [
                 DummyArg2::class => $arg2,
+            ], [
+                'arg5' => $arg5,
                 new DefaultValue,
                 $arg4,
             ]);
 
-            expect($test)->to->be->equal([$arg1, $arg2, $arg3, $arg4]);
+            expect($test)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
 
         });
 
@@ -143,6 +150,7 @@ describe('ReflectionContainer', function () {
             $arg2 = new DummyArg2('arg2');
             $arg3 = 'arg3';
             $arg4 = 'arg4';
+            $arg5 = 'arg5';
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
@@ -150,9 +158,9 @@ describe('ReflectionContainer', function () {
 
             $class = new class {
 
-                public function test (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4) {
+                public function test (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5) {
 
-                    return [$arg1, $arg2, $arg3, $arg4];
+                    return [$arg1, $arg2, $arg3, $arg4, $arg5];
 
                 }
 
@@ -160,11 +168,13 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->call([$class, 'test'], [
                 DummyArg2::class => $arg2,
+            ], [
+                'arg5' => $arg5,
                 new DefaultValue,
                 $arg4,
             ]);
 
-            expect($test)->to->be->equal([$arg1, $arg2, $arg3, $arg4]);
+            expect($test)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
 
         });
 
@@ -174,6 +184,7 @@ describe('ReflectionContainer', function () {
             $arg2 = new DummyArg2('arg2');
             $arg3 = 'arg3';
             $arg4 = 'arg4';
+            $arg5 = 'arg5';
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
@@ -181,13 +192,15 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->call('DummyClassStatic::getInstance', [
                 DummyArg2::class => $arg2,
+            ], [
+                'arg5' => $arg5,
                 new DefaultValue,
                 $arg4,
             ]);
 
             $parameters = $test->getParameters();
 
-            expect($parameters)->to->be->equal([$arg1, $arg2, $arg3, $arg4]);
+            expect($parameters)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
 
         });
 
@@ -201,9 +214,9 @@ describe('ReflectionContainer', function () {
                 ->with(DummyArg2::class)
                 ->andReturn(new DummyArg2('arg2'));
 
-            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4) {
+            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5) {
 
-                return [$arg1, $arg2, $arg3, $arg4];
+                return [$arg1, $arg2, $arg3, $arg4, $arg5];
 
             };
 

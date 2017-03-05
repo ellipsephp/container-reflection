@@ -18,9 +18,10 @@ class ReflectionContainer extends AbstractContainerDecorator
      *
      * @param string $class
      * @param array  $overrides
+     * @param array  $defaults
      * @return mixed
      */
-    public function make(string $class, array $overrides)
+    public function make(string $class, array $overrides = [], array $defaults = [])
     {
         $reflection = new ReflectionClass($class);
 
@@ -28,7 +29,7 @@ class ReflectionContainer extends AbstractContainerDecorator
 
         $parameters = $constructor->getParameters();
 
-        $values = $this->getResolvedParameters($parameters, $overrides);
+        $values = $this->getResolvedParameters($parameters, $overrides, $defaults);
 
         return $reflection->newInstanceArgs($values);
     }
@@ -39,9 +40,10 @@ class ReflectionContainer extends AbstractContainerDecorator
      *
      * @param callable  $callable
      * @param array     $overrides
+     * @param array     $defaults
      * @return mixed
      */
-    public function call(callable $callable, array $overrides)
+    public function call(callable $callable, array $overrides = [], array $defaults = [])
     {
         if (is_string($callable) and strpos($callable, '::') !== false) {
 
@@ -55,7 +57,7 @@ class ReflectionContainer extends AbstractContainerDecorator
 
         $parameters = $reflection->getParameters();
 
-        $values = $this->getResolvedParameters($parameters, $overrides);
+        $values = $this->getResolvedParameters($parameters, $overrides, $defaults);
 
         if (! is_array($callable)) {
 
@@ -69,74 +71,67 @@ class ReflectionContainer extends AbstractContainerDecorator
     }
 
     /**
-     * Return the values which have a named key.
-     *
-     * @param array $overrides
-     * @return array
-     */
-    private function getNamedOverrides(array $overrides): array
-    {
-        return array_filter($overrides, function ($key) {
-
-            return is_string($key);
-
-        }, ARRAY_FILTER_USE_KEY);
-    }
-
-    /**
-     * Return the values which doesn't have a named key.
-     *
-     * @param array $overrides
-     * @return array
-     */
-    private function getDefaultsOverrides(array $overrides): array
-    {
-        return array_filter($overrides, function ($key) {
-
-            return ! is_string($key);
-
-        }, ARRAY_FILTER_USE_KEY);
-    }
-
-    /**
      * Resolve the list of values to use as parameters from the given list of
      * reflection parameters and the given overrides.
      *
      * @param array $parameters
      * @param array $overrides
+     * @param array $defaults
      * @return array
      * @throws \Ellipse\Container\Exceptions\NoValueDefinedForParameterException
      */
-    private function getResolvedParameters(array $parameters, array $overrides): array
+    private function getResolvedParameters(array $parameters, array $overrides, array $defaults): array
     {
-        $named = $this->getNamedOverrides($overrides);
-        $defaults = $this->getDefaultsOverrides($overrides);
+        // get scalars parameters.
+        $scalars = array_filter($parameters, function (ReflectionParameter $parameter) {
 
-        return array_map(function (ReflectionParameter $parameter) use ($named, &$defaults) {
+            return is_null($parameter->getClass());
 
-            $name = $parameter->getName();
+        });
 
-            // priority to overrides having the same name as the parameter.
-            if (array_key_exists($name, $named)) {
+        // get names of scalar parameters.
+        $names = array_map(function (ReflectionParameter $scalar) {
 
-                return $named[$name];
+            return $scalar->getName();
 
-            }
+        }, $scalars);
 
-            // then when the parameter is type hinted as a class try to return
-            // an override named as this class. Retrieve an instance of this
-            // class from the container when there is no suitable override.
+        // get the defaults with a key named as a scalar parameter.
+        $named = array_filter($defaults, function ($key) use ($names) {
+
+            return in_array((string) $key, $names);
+
+        }, ARRAY_FILTER_USE_KEY);
+
+        // get the defaults with a key not named as a scalar parameter.
+        $defaults = array_filter($defaults, function ($key) use ($names) {
+
+            return ! in_array((string) $key, $names);
+
+        }, ARRAY_FILTER_USE_KEY);
+
+        // return a value for each parameter.
+        return array_map(function (ReflectionParameter $parameter) use ($overrides, $named, &$defaults) {
+
+            // when the parameter is type hinted as a class try to return an
+            // override named like this class. If no override is named like this
+            // then retrieve an instance of this class from the container.
             if ($class = $parameter->getClass()) {
 
                 $name = $class->getName();
 
-                if (array_key_exists($name, $named)) return $named[$name];
-
-                return $this->container->get($name);
+                return array_key_exists($name, $overrides)
+                    ? $overrides[$name]
+                    : $this->container->get($name);
 
             }
 
-            // then try to get a not null default overrides.
+            // priority to defaults having the same name as the parameter.
+            $name = $parameter->getName();
+
+            if (array_key_exists($name, $named)) return $named[$name];
+
+            // try to get a default value.
             if (count($defaults) > 0) {
 
                 $value = array_shift($defaults);
