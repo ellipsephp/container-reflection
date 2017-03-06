@@ -25,13 +25,17 @@ class ReflectionContainer extends AbstractContainerDecorator
     {
         $reflection = new ReflectionClass($class);
 
-        $constructor = $reflection->getConstructor();
+        if ($constructor = $reflection->getConstructor()) {
 
-        $parameters = $constructor->getParameters();
+            $parameters = $constructor->getParameters();
 
-        $values = $this->getResolvedParameters($parameters, $overrides, $defaults);
+            $values = $this->getResolvedParameters($parameters, $overrides, $defaults);
 
-        return $reflection->newInstanceArgs($values);
+            return $reflection->newInstanceArgs($values);
+
+        }
+
+        return new $class;
     }
 
     /**

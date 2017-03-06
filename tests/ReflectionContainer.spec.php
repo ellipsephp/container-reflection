@@ -45,6 +45,14 @@ class DummyClass
     }
 }
 
+class DummyClassWithoutConstructor
+{
+    public function getParameters()
+    {
+        return [];
+    }
+}
+
 class DummyClassStatic
 {
     static public function getInstance(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5)
@@ -87,6 +95,16 @@ describe('ReflectionContainer', function () {
             $parameters = $test->getParameters();
 
             expect($parameters)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
+
+        });
+
+        it('should work when the class has no constructor', function () {
+
+            $test = $this->container->make(DummyClassWithoutConstructor::class);
+
+            $parameters = $test->getParameters();
+
+            expect($parameters)->to->be->equal([]);
 
         });
 
