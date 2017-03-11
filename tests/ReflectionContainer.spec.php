@@ -1,6 +1,6 @@
 <?php
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 
 use Ellipse\Container\ReflectionContainer;
 use Ellipse\Container\DefaultValue;
@@ -67,6 +67,65 @@ describe('ReflectionContainer', function () {
 
         $this->wrapped = Mockery::mock(ContainerInterface::class);
         $this->container = new ReflectionContainer($this->wrapped);
+
+    });
+
+    it('should implements container interface', function () {
+
+        expect($this->container)->to->be->an->instanceof(ContainerInterface::class);
+
+    });
+
+    describe('->get()', function () {
+
+        it('should proxy the underlying container get method', function () {
+
+            $alias = 'test';
+            $instance = new class {};
+
+            $this->wrapped->shouldReceive('get')
+                ->with($alias)
+                ->andReturn($instance);
+
+            $test = $this->container->get($alias);
+
+            expect($test)->to->be->equal($instance);
+
+        });
+
+    });
+
+    describe('->has()', function () {
+
+        it('should call the underlying container has method and return true when it succeeded', function () {
+
+            $alias = 'test';
+            $expected = true;
+
+            $this->wrapped->shouldReceive('has')
+                ->with($alias)
+                ->andReturn($expected);
+
+            $test = $this->container->has($alias);
+
+            expect($test)->to->be->equal($expected);
+
+        });
+
+        it('should call the underlying container has method and return false when it failed', function () {
+
+            $alias = 'test';
+            $expected = false;
+
+            $this->wrapped->shouldReceive('has')
+                ->with($alias)
+                ->andReturn($expected);
+
+            $test = $this->container->has($alias);
+
+            expect($test)->to->be->equal($expected);
+
+        });
 
     });
 

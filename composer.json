@@ -20,7 +20,7 @@
     ],
     "require": {
         "php": ">=7.1",
-        "acclimate/container": "^1.0",
+        "psr/container": "^1.0",
         "mindplay/readable": "^1.1"
     },
     "autoload": {
@@ -31,8 +31,7 @@
     "require-dev": {
         "peridot-php/peridot": "^1.19",
         "peridot-php/leo": "^1.6",
-        "mockery/mockery": "^1.0-alpha",
-        "container-interop/container-interop": "^1.2"
+        "mockery/mockery": "^1.0-alpha"
     },
     "extra": {
         "branch-alias": {

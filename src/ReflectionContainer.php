@@ -7,12 +7,45 @@ use ReflectionMethod;
 use ReflectionFunction;
 use ReflectionParameter;
 
-use Acclimate\Container\Decorator\AbstractContainerDecorator;
+use Psr\Container\ContainerInterface;
 
 use Ellipse\Container\Exceptions\NoValueDefinedForParameterException;
 
-class ReflectionContainer extends AbstractContainerDecorator
+class ReflectionContainer implements ContainerInterface
 {
+    /**
+     * The underlying container to decorate.
+     *
+     * @var \Psr\Container\ContainerInterface
+     */
+    private $container;
+
+    /**
+     * Set up a reflection container with the underlying container to decorate.
+     *
+     * @param \Psr\Container\ContainerInterface
+     */
+    public function __construct(ContainerInterface $container)
+    {
+        $this->container = $container;
+    }
+
+    /**
+     * @{inheritdoc}
+     */
+    public function get($id)
+    {
+        return $this->container->get($id);
+    }
+
+    /**
+     * @{inheritdoc}
+     */
+    public function has($id)
+    {
+        return $this->container->has($id);
+    }
+
     /**
      * Make an instance of the given class.
      *
