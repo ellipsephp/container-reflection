@@ -3,7 +3,6 @@
 use Psr\Container\ContainerInterface;
 
 use Ellipse\Container\ReflectionContainer;
-use Ellipse\Container\DefaultValue;
 use Ellipse\Container\Exceptions\NoValueDefinedForParameterException;
 
 class DummyArg1
@@ -30,7 +29,7 @@ class DummyClass
 {
     private $parameters = [];
 
-    public function __construct(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5)
+    public function __construct(DummyArg1 $arg1, DummyArg2 $arg2, $arg3, $arg4, $arg5 = 'arg5')
     {
         $this->parameters[] = $arg1;
         $this->parameters[] = $arg2;
@@ -55,7 +54,7 @@ class DummyClassWithoutConstructor
 
 class DummyClassStatic
 {
-    static public function getInstance(DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5)
+    static public function getInstance(DummyArg1 $arg1, DummyArg2 $arg2, $arg3, $arg4, $arg5 = 'arg5')
     {
         return new DummyClass($arg1, $arg2, $arg3, $arg4, $arg5);
     }
@@ -146,9 +145,8 @@ describe('ReflectionContainer', function () {
             $test = $this->container->make(DummyClass::class, [
                 DummyArg2::class => $arg2,
             ], [
-                'arg5' => $arg5,
-                new DefaultValue,
-                $arg4,
+                'arg4' => $arg4,
+                $arg3,
             ]);
 
             $parameters = $test->getParameters();
@@ -203,7 +201,7 @@ describe('ReflectionContainer', function () {
                 ->with(DummyArg1::class)
                 ->andReturn($arg1);
 
-            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5) {
+            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3, $arg4, $arg5 = 'arg5') {
 
                 return [$arg1, $arg2, $arg3, $arg4, $arg5];
 
@@ -212,9 +210,8 @@ describe('ReflectionContainer', function () {
             $test = $this->container->call($cb, [
                 DummyArg2::class => $arg2,
             ], [
-                'arg5' => $arg5,
-                new DefaultValue,
-                $arg4,
+                'arg4' => $arg4,
+                $arg3,
             ]);
 
             expect($test)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
@@ -235,7 +232,7 @@ describe('ReflectionContainer', function () {
 
             $class = new class {
 
-                public function test (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5) {
+                public function test (DummyArg1 $arg1, DummyArg2 $arg2, $arg3, $arg4, $arg5 = 'arg5') {
 
                     return [$arg1, $arg2, $arg3, $arg4, $arg5];
 
@@ -246,9 +243,8 @@ describe('ReflectionContainer', function () {
             $test = $this->container->call([$class, 'test'], [
                 DummyArg2::class => $arg2,
             ], [
-                'arg5' => $arg5,
-                new DefaultValue,
-                $arg4,
+                'arg4' => $arg4,
+                $arg3,
             ]);
 
             expect($test)->to->be->equal([$arg1, $arg2, $arg3, $arg4, $arg5]);
@@ -270,9 +266,8 @@ describe('ReflectionContainer', function () {
             $test = $this->container->call('DummyClassStatic::getInstance', [
                 DummyArg2::class => $arg2,
             ], [
-                'arg5' => $arg5,
-                new DefaultValue,
-                $arg4,
+                'arg4' => $arg4,
+                $arg3,
             ]);
 
             $parameters = $test->getParameters();
@@ -291,7 +286,7 @@ describe('ReflectionContainer', function () {
                 ->with(DummyArg2::class)
                 ->andReturn(new DummyArg2('arg2'));
 
-            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3 = 'arg3', $arg4, $arg5) {
+            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3, $arg4, $arg5 = 'arg5') {
 
                 return [$arg1, $arg2, $arg3, $arg4, $arg5];
 

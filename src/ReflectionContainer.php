@@ -51,24 +51,26 @@ class ReflectionContainer implements ContainerInterface
      *
      * @param string $class
      * @param array  $overrides
-     * @param array  $defaults
+     * @param array  $values
      * @return mixed
      */
-    public function make(string $class, array $overrides = [], array $defaults = [])
+    public function make(string $class, array $overrides = [], array $values = [])
     {
+        // reflect the class constructor if any.
         $reflection = new ReflectionClass($class);
 
-        if ($constructor = $reflection->getConstructor()) {
+        $constructor = $reflection->getConstructor();
 
-            $parameters = $constructor->getParameters();
+        // when the class has no constructor just return a new instance.
+        if (! $constructor) return new $class;
 
-            $values = $this->getResolvedParameters($parameters, $overrides, $defaults);
+        // otherwise resolve the constructor parameters values and create a new
+        // instance of the class using those values.
+        $parameters = $constructor->getParameters();
 
-            return $reflection->newInstanceArgs($values);
+        $values = $this->getResolvedParameters($parameters, $overrides, $values);
 
-        }
-
-        return new $class;
+        return $reflection->newInstanceArgs($values);
     }
 
     /**
@@ -77,31 +79,39 @@ class ReflectionContainer implements ContainerInterface
      *
      * @param callable  $callable
      * @param array     $overrides
-     * @param array     $defaults
+     * @param array     $values
      * @return mixed
      */
-    public function call(callable $callable, array $overrides = [], array $defaults = [])
+    public function call(callable $callable, array $overrides = [], array $values = [])
     {
+        // make a callable array from a callable string.
         if (is_string($callable) and strpos($callable, '::') !== false) {
 
             $callable = explode('::', $callable);
 
         }
 
+        // reflect a class method or a function according to the callable type.
         $reflection = is_array($callable)
             ? new ReflectionMethod($callable[0], $callable[1])
-            : new Reflectionfunction($callable);
+            : new ReflectionFunction($callable);
 
+
+        // resolve the callable parameters values.
         $parameters = $reflection->getParameters();
 
-        $values = $this->getResolvedParameters($parameters, $overrides, $defaults);
+        $values = $this->getResolvedParameters($parameters, $overrides, $values);
 
-        if (! is_array($callable)) {
+        // when the callable is a function call it using those values.
+        if ($reflection instanceof ReflectionFunction) {
 
             return $reflection->invokeArgs($values);
 
         }
 
+        // otherwise get the method's class and call the method with the
+        // resolved parameters values. The class instance is null when the
+        // method is static.
         $instance = ! $reflection->isStatic() ? $callable[0] : null;
 
         return $reflection->invokeArgs($instance, $values);
@@ -113,11 +123,11 @@ class ReflectionContainer implements ContainerInterface
      *
      * @param array $parameters
      * @param array $overrides
-     * @param array $defaults
+     * @param array $values
      * @return array
      * @throws \Ellipse\Container\Exceptions\NoValueDefinedForParameterException
      */
-    private function getResolvedParameters(array $parameters, array $overrides, array $defaults): array
+    private function getResolvedParameters(array $parameters, array $overrides, array $values): array
     {
         // get scalars parameters.
         $scalars = array_filter($parameters, function (ReflectionParameter $parameter) {
@@ -133,22 +143,22 @@ class ReflectionContainer implements ContainerInterface
 
         }, $scalars);
 
-        // get the defaults with a key named as a scalar parameter.
-        $named = array_filter($defaults, function ($key) use ($names) {
+        // get the values with a key named as a scalar parameter.
+        $named = array_filter($values, function ($key) use ($names) {
 
             return in_array((string) $key, $names);
 
         }, ARRAY_FILTER_USE_KEY);
 
-        // get the defaults with a key not named as a scalar parameter.
-        $defaults = array_filter($defaults, function ($key) use ($names) {
+        // get the $values with a key not named as a scalar parameter.
+        $anonymous = array_filter($values, function ($key) use ($names) {
 
             return ! in_array((string) $key, $names);
 
         }, ARRAY_FILTER_USE_KEY);
 
         // return a value for each parameter.
-        return array_map(function (ReflectionParameter $parameter) use ($overrides, $named, &$defaults) {
+        return array_map(function (ReflectionParameter $parameter) use ($overrides, $named, &$anonymous) {
 
             // when the parameter is type hinted as a class try to return an
             // override named like this class. If no override is named like this
@@ -169,13 +179,7 @@ class ReflectionContainer implements ContainerInterface
             if (array_key_exists($name, $named)) return $named[$name];
 
             // try to get a default value.
-            if (count($defaults) > 0) {
-
-                $value = array_shift($defaults);
-
-                if (! $value instanceof DefaultValue) return $value;
-
-            }
+            if (count($anonymous) > 0) return array_shift($anonymous);
 
             // finally try to return the defined default value if any.
             if ($parameter->isDefaultValueAvailable()) {
