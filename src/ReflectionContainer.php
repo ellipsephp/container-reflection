@@ -118,6 +118,70 @@ class ReflectionContainer implements ContainerInterface
     }
 
     /**
+     * Return only the scalar parameters from the given list of the parameters.
+     *
+     * @param array $parameters
+     * @return array
+     */
+    private function getScalarParameters(array $parameters): array
+    {
+        return array_filter($parameters, function (ReflectionParameter $parameter) {
+
+            return is_null($parameter->getClass());
+
+        });
+    }
+
+    /**
+     * Return the names of the parameters from the given list of parameters.
+     *
+     * @param array $parameters
+     * @return array
+     */
+    private function getParametersNames(array $parameters): array
+    {
+        return array_map(function (ReflectionParameter $parameter) {
+
+            return $parameter->getName();
+
+        }, $parameters);
+    }
+
+    /**
+    * Return the values from the given list of values which have its key present
+    * in the given list of names.
+     *
+     * @param array $values
+     * @param array $names
+     * @return array
+     */
+    private function getNamedValues(array $values, array $names): array
+    {
+        return array_filter($values, function ($key) use ($names) {
+
+            return in_array((string) $key, $names);
+
+        }, ARRAY_FILTER_USE_KEY);
+    }
+
+    /**
+     * Return the values from the given list of values which doesn't have its
+     * key present in the given list of names.
+     *
+     * @param array $values
+     * @param array $names
+     * @return array
+     */
+    private function getAnonymousValues(array $values, array $names): array
+    {
+        return array_filter($values, function ($key) use ($names) {
+
+            return ! in_array((string) $key, $names);
+
+        }, ARRAY_FILTER_USE_KEY);
+    }
+
+    /**
      * Resolve the list of values to use as parameters from the given list of
      * reflection parameters and the given overrides.
      *
@@ -129,35 +193,15 @@ class ReflectionContainer implements ContainerInterface
      */
     private function getResolvedParameters(array $parameters, array $overrides, array $values): array
     {
-        // get scalars parameters.
-        $scalars = array_filter($parameters, function (ReflectionParameter $parameter) {
+        $scalars = $this->getScalarParameters($parameters);
 
-            return is_null($parameter->getClass());
+        $names = $this->getParametersNames($scalars);
 
-        });
+        $named = $this->getNamedValues($values, $names);
 
-        // get names of scalar parameters.
-        $names = array_map(function (ReflectionParameter $scalar) {
+        $anonymous = $this->getAnonymousValues($values, $names);
 
-            return $scalar->getName();
-
-        }, $scalars);
-
-        // get the values with a key named as a scalar parameter.
-        $named = array_filter($values, function ($key) use ($names) {
-
-            return in_array((string) $key, $names);
-
-        }, ARRAY_FILTER_USE_KEY);
-
-        // get the $values with a key not named as a scalar parameter.
-        $anonymous = array_filter($values, function ($key) use ($names) {
-
-            return ! in_array((string) $key, $names);
-
-        }, ARRAY_FILTER_USE_KEY);
-
-        // return a value for each parameter.
+        // resolve a value for each parameter.
         return array_map(function (ReflectionParameter $parameter) use ($overrides, $named, &$anonymous) {
 
             // when the parameter is type hinted as a class try to return an
