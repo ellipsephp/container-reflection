@@ -202,18 +202,21 @@ class ReflectionContainer implements ContainerInterface
         $anonymous = $this->getAnonymousValues($values, $names);
 
         // resolve a value for each parameter.
-        return array_map(function (ReflectionParameter $parameter) use ($overrides, $named, &$anonymous) {
+        return array_map(function (ReflectionParameter $parameter) use ($overrides, $values, $named, &$anonymous) {
 
             // when the parameter is type hinted as a class try to return an
             // override named like this class. If no override is named like this
-            // then retrieve an instance of this class from the container.
+            // then retrieve an instance of this class from the container when
+            // it contains the classname or make a new instance.
             if ($class = $parameter->getClass()) {
 
                 $name = $class->getName();
 
-                return array_key_exists($name, $overrides)
-                    ? $overrides[$name]
-                    : $this->container->get($name);
+                if (array_key_exists($name, $overrides)) return $overrides[$name];
+
+                if ($this->has($name)) return $this->get($name);
+
+                return $this->make($name, $overrides, $values);
 
             }
 

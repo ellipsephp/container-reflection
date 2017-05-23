@@ -13,6 +13,11 @@ class DummyArg1
     {
         $this->value = $value;
     }
+
+    public function getValue()
+    {
+        return $this->value;
+    }
 }
 
 class DummyArg2
@@ -22,6 +27,11 @@ class DummyArg2
     public function __construct($value)
     {
         $this->value = $value;
+    }
+
+    public function getValue()
+    {
+        return $this->value;
     }
 }
 
@@ -138,6 +148,10 @@ describe('ReflectionContainer', function () {
             $arg4 = 'arg4';
             $arg5 = 'arg5';
 
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(true);
+
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
                 ->andReturn($arg1);
@@ -165,11 +179,58 @@ describe('ReflectionContainer', function () {
 
         });
 
+        it('should use make when a parameter type hinted as a class is neither in overides nor the container', function () {
+
+            $arg1 = 'arg1';
+            $arg2 = new DummyArg2('arg2');
+            $arg3 = 'arg3';
+            $arg4 = 'arg4';
+            $arg5 = 'arg5';
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(false);
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg2::class)
+                ->andReturn(true);
+
+            $this->wrapped->shouldReceive('get')
+                ->with(DummyArg2::class)
+                ->andReturn($arg2);
+
+            $test = $this->container->make(DummyClass::class, [
+                DummyArg2::class => $arg2,
+            ], [
+                $arg3,
+                $arg4,
+                $arg5,
+                'value' => $arg1,
+            ]);
+
+            $parameters = $test->getParameters();
+
+            $parameter1 = array_shift($parameters);
+
+            expect($parameter1)->to->be->an->instanceof(DummyArg1::class);
+            expect($parameter1->getValue())->to->be->equal($arg1);
+            expect($parameters)->to->be->equal([$arg2, $arg3, $arg4, $arg5]);
+
+        });
+
         it('should fail when it cant resolve one parameter', function () {
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(true);
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
                 ->andReturn(new DummyArg1('arg1'));
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg2::class)
+                ->andReturn(true);
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg2::class)
@@ -196,6 +257,10 @@ describe('ReflectionContainer', function () {
             $arg3 = 'arg3';
             $arg4 = 'arg4';
             $arg5 = 'arg5';
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(true);
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
@@ -225,6 +290,10 @@ describe('ReflectionContainer', function () {
             $arg3 = 'arg3';
             $arg4 = 'arg4';
             $arg5 = 'arg5';
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(true);
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
@@ -259,6 +328,10 @@ describe('ReflectionContainer', function () {
             $arg4 = 'arg4';
             $arg5 = 'arg5';
 
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(true);
+
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
                 ->andReturn($arg1);
@@ -276,11 +349,62 @@ describe('ReflectionContainer', function () {
 
         });
 
+        it('should use make when a parameter type hinted as a class is neither in overides nor the container', function () {
+
+            $arg1 = 'arg1';
+            $arg2 = new DummyArg2('arg2');
+            $arg3 = 'arg3';
+            $arg4 = 'arg4';
+            $arg5 = 'arg5';
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(false);
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg2::class)
+                ->andReturn(true);
+
+            $this->wrapped->shouldReceive('get')
+                ->with(DummyArg2::class)
+                ->andReturn($arg2);
+
+            $cb = function (DummyArg1 $arg1, DummyArg2 $arg2, $arg3, $arg4, $arg5 = 'arg5') {
+
+                return [$arg1, $arg2, $arg3, $arg4, $arg5];
+
+            };
+
+            $test = $this->container->call($cb, [
+                DummyArg2::class => $arg2,
+            ], [
+                $arg3,
+                $arg4,
+                $arg5,
+                'value' => $arg1,
+            ]);
+
+            $parameter1 = array_shift($test);
+
+            expect($parameter1)->to->be->an->instanceof(DummyArg1::class);
+            expect($parameter1->getValue())->to->be->equal($arg1);
+            expect($test)->to->be->equal([$arg2, $arg3, $arg4, $arg5]);
+
+        });
+
         it('should fail when it cant resolve one parameter', function () {
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg1::class)
+                ->andReturn(true);
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
                 ->andReturn(new DummyArg1('arg1'));
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyArg2::class)
+                ->andReturn(true);
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg2::class)
