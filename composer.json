@@ -1,7 +1,7 @@
 {
     "name": "ellipse/container",
     "type": "library",
-    "description": "extra features for psr container",
+    "description": "Extra features for psr container",
     "keywords": [
         "psr-11",
         "container"
