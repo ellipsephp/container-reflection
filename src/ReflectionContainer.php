@@ -129,10 +129,7 @@ class ReflectionContainer implements ContainerInterface
      */
     private function getResolvedParameters(array $parameters, array $overrides, array $values): array
     {
-        // get a copy of the values.
-        $stack = array_merge([], $values);
-
-        return array_map(function (ReflectionParameter $parameter) use ($overrides, $values, &$stack) {
+        return array_map(function (ReflectionParameter $parameter) use ($overrides, &$values) {
 
             // when the parameter is type hinted as a class try to return an
             // override named like this class. If no override is named like this
@@ -146,12 +143,12 @@ class ReflectionContainer implements ContainerInterface
 
                 if ($this->has($name)) return $this->get($name);
 
-                return $this->make($name, $overrides, $values);
+                return $this->make($name, $overrides);
 
             }
 
             // get the next value in the list.
-            if (count($stack) > 0) return array_shift($stack);
+            if (count($values) > 0) return array_shift($values);
 
             // finally try to return the parameter default value if any.
             if ($parameter->isDefaultValueAvailable()) {
