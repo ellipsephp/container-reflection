@@ -56,6 +56,9 @@ class ReflectionContainer implements ContainerInterface
      */
     public function make(string $class, array $overrides = [], array $values = [])
     {
+        // get the class from the container when it contains it.
+        if ($this->has($class)) return $this->get($class);
+
         // reflect the class constructor if any.
         $reflection = new ReflectionClass($class);
 

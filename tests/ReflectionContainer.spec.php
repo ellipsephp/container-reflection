@@ -180,7 +180,39 @@ describe('ReflectionContainer', function () {
 
     describe('->make()', function () {
 
-        it('should work as expected', function () {
+        it('should get the class from the container when it contains it', function () {
+
+            $instance = new class {};
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyClass::class)
+                ->andReturn(true);
+
+            $this->wrapped->shouldReceive('get')
+                ->with(DummyClass::class)
+                ->andReturn($instance);
+
+            $test = $this->container->make(DummyClass::class);
+
+            expect($test)->to->be->equal($instance);
+
+        });
+
+        it('should work when the class has no constructor', function () {
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyClassWithoutConstructor::class)
+                ->andReturn(false);
+
+            $test = $this->container->make(DummyClassWithoutConstructor::class);
+
+            $parameters = $test->getParameters();
+
+            expect($parameters)->to->be->equal([]);
+
+        });
+
+        it('should recursively inject the dependencies in the class constructor', function () {
 
             $arg1 = 'arg1';
             $arg2 = new DummyArg1('arg2');
@@ -188,6 +220,10 @@ describe('ReflectionContainer', function () {
             $arg5 = 'arg5';
             $arg6 = 'arg6';
             $subarg1 = new DummyArg4;
+
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyClass::class)
+                ->andReturn(false);
 
             $this->wrapped->shouldReceive('has')
                 ->with(DummyArg1::class)
@@ -223,25 +259,13 @@ describe('ReflectionContainer', function () {
 
         });
 
-        it('should work when the class has no constructor', function () {
-
-            $test = $this->container->make(DummyClassWithoutConstructor::class);
-
-            $parameters = $test->getParameters();
-
-            expect($parameters)->to->be->equal([]);
-
-        });
-
         it('should fail when it cant resolve one parameter', function () {
 
-            $test = function ($container) {
+            $this->wrapped->shouldReceive('has')
+                ->with(DummyClass::class)
+                ->andReturn(false);
 
-                return $container->make(DummyClass::class, []);
-
-            };
-
-            expect($test)->with($this->container)->to->throw(NoValueDefinedForParameterException::class);
+            expect([$this->container, 'make'])->with(DummyClass::class)->to->throw(NoValueDefinedForParameterException::class);
 
         });
 
