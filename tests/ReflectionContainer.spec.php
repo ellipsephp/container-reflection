@@ -178,109 +178,85 @@ describe('ReflectionContainer', function () {
 
     });
 
-    describe('->make()', function () {
+    context('when no parameters need to be resolved', function () {
 
-        it('should get the class from the container when it contains it', function () {
+        describe('->make()', function () {
 
-            $instance = new class {};
+            context('when the container contains an instance of the class', function () {
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyClass::class)
-                ->andReturn(true);
+                it('should return the instance of the class', function () {
 
-            $this->wrapped->shouldReceive('get')
-                ->with(DummyClass::class)
-                ->andReturn($instance);
+                    $instance = new class {};
 
-            $test = $this->container->make(DummyClass::class);
+                    $this->wrapped->shouldReceive('has')
+                        ->with(DummyClass::class)
+                        ->andReturn(true);
 
-            expect($test)->to->be->equal($instance);
+                    $this->wrapped->shouldReceive('get')
+                        ->with(DummyClass::class)
+                        ->andReturn($instance);
 
-        });
+                    $test = $this->container->make(DummyClass::class);
 
-        it('should work when the class has no constructor', function () {
+                    expect($test)->to->be->equal($instance);
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyClassWithoutConstructor::class)
-                ->andReturn(false);
+                });
 
-            $test = $this->container->make(DummyClassWithoutConstructor::class);
+            });
 
-            $parameters = $test->getParameters();
+            context('when the container does not contain an instance of the class', function () {
 
-            expect($parameters)->to->be->equal([]);
+                it('should return an instance of the class when it has no constructor', function () {
 
-        });
+                    $this->wrapped->shouldReceive('has')
+                        ->with(DummyClassWithoutConstructor::class)
+                        ->andReturn(false);
 
-        it('should recursively inject the dependencies in the class constructor', function () {
+                    $test = $this->container->make(DummyClassWithoutConstructor::class);
 
-            $arg1 = 'arg1';
-            $arg2 = new DummyArg1('arg2');
-            $arg3 = new DummyArg2('arg3');
-            $arg5 = 'arg5';
-            $arg6 = 'arg6';
-            $subarg1 = new DummyArg4;
+                    $parameters = $test->getParameters();
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyClass::class)
-                ->andReturn(false);
+                    expect($parameters)->to->be->equal([]);
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg1::class)
-                ->andReturn(true);
+                });
 
-            $this->wrapped->shouldReceive('get')
-                ->with(DummyArg1::class)
-                ->andReturn($arg2);
-
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg3::class)
-                ->andReturn(false);
-
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg5::class)
-                ->andReturn(false);
-
-            $test = $this->container->make(DummyClass::class, [
-                DummyArg2::class => $arg3,
-                DummyArg4::class => $subarg1,
-            ], [
-                $arg1,
-                $arg5,
-            ]);
-
-            [$p1, $p2, $p3, $p4, $p5, $p6] = $test->getParameters();
-
-            expect($p4)->to->be->an->instanceof(DummyArg3::class);
-            expect($p4->getContainer())->to->be->equal($this->wrapped);
-            expect($p4->getArg1())->to->be->equal($subarg1);
-            expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
-            expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal([$arg1, $arg2, $arg3, $arg5, $arg6]);
+            });
 
         });
 
-        it('should fail when it cant resolve one parameter', function () {
+        describe('->call()', function () {
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyClass::class)
-                ->andReturn(false);
+            it('should execute the callable', function () {
 
-            expect([$this->container, 'make'])->with(DummyClass::class)->to->throw(NoValueDefinedForParameterException::class);
+                $cb = function () { return 'value'; };
+
+                $test = $this->container->call($cb);
+
+                expect($test)->to->be->equal('value');
+
+            });
 
         });
 
     });
 
-    describe('->call()', function () {
+    context('when all the parameters are resolvable', function () {
 
-        it('should work with annonymous functions', function () {
+        beforeEach(function () {
 
-            $arg1 = 'arg1';
-            $arg2 = new DummyArg1('arg2');
-            $arg3 = new DummyArg2('arg3');
-            $arg5 = 'arg5';
-            $arg6 = 'arg6';
-            $subarg1 = new DummyArg4;
+            $this->arg1 = 'arg1';
+            $this->arg2 = new DummyArg1('arg2');
+            $this->arg3 = new DummyArg2('arg3');
+            $this->arg5 = 'arg5';
+            $this->arg6 = 'arg6';
+            $this->subarg1 = new DummyArg4;
+
+            $this->overrides = [
+                DummyArg2::class => $this->arg3,
+                DummyArg4::class => $this->subarg1,
+            ];
+
+            $this->parameters = [$this->arg1, $this->arg5];
 
             $this->wrapped->shouldReceive('has')
                 ->with(DummyArg1::class)
@@ -288,7 +264,7 @@ describe('ReflectionContainer', function () {
 
             $this->wrapped->shouldReceive('get')
                 ->with(DummyArg1::class)
-                ->andReturn($arg2);
+                ->andReturn($this->arg2);
 
             $this->wrapped->shouldReceive('has')
                 ->with(DummyArg3::class)
@@ -298,137 +274,145 @@ describe('ReflectionContainer', function () {
                 ->with(DummyArg5::class)
                 ->andReturn(false);
 
-            $cb = function ($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6') {
-
-                return [$arg1, $arg2, $arg3, $arg4, $arg5, $arg6];
-
-            };
-
-            $test = $this->container->call($cb, [
-                DummyArg2::class => $arg3,
-                DummyArg4::class => $subarg1,
-            ], [
-                $arg1,
-                $arg5,
-            ]);
-
-            [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
-
-            expect($p4)->to->be->an->instanceof(DummyArg3::class);
-            expect($p4->getContainer())->to->be->equal($this->wrapped);
-            expect($p4->getArg1())->to->be->equal($subarg1);
-            expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
-            expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal([$arg1, $arg2, $arg3, $arg5, $arg6]);
+            $this->expected = [
+                $this->arg1, $this->arg2, $this->arg3, $this->arg5, $this->arg6,
+            ];
 
         });
 
-        it('should work with class method', function () {
+        describe('->make()', function () {
 
-            $arg1 = 'arg1';
-            $arg2 = new DummyArg1('arg2');
-            $arg3 = new DummyArg2('arg3');
-            $arg5 = 'arg5';
-            $arg6 = 'arg6';
-            $subarg1 = new DummyArg4;
+            it('should recursively inject the dependencies in class constructors', function () {
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg1::class)
-                ->andReturn(true);
+                $this->wrapped->shouldReceive('has')
+                    ->with(DummyClass::class)
+                    ->andReturn(false);
 
-            $this->wrapped->shouldReceive('get')
-                ->with(DummyArg1::class)
-                ->andReturn($arg2);
+                $test = $this->container->make(DummyClass::class, $this->overrides, $this->parameters);
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg3::class)
-                ->andReturn(false);
+                [$p1, $p2, $p3, $p4, $p5, $p6] = $test->getParameters();
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg5::class)
-                ->andReturn(false);
+                expect($p4)->to->be->an->instanceof(DummyArg3::class);
+                expect($p4->getContainer())->to->be->equal($this->wrapped);
+                expect($p4->getArg1())->to->be->equal($this->subarg1);
+                expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
+                expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal($this->expected);
 
-            $class = new class {
+            });
 
-                public function test ($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6') {
+        });
+
+        describe('->call()', function () {
+
+            it('should recursively inject the dependencies of annonymous functions', function () {
+
+                $cb = function ($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6') {
 
                     return [$arg1, $arg2, $arg3, $arg4, $arg5, $arg6];
 
-                }
+                };
 
-            };
+                $test = $this->container->call($cb, $this->overrides, $this->parameters);
 
-            $test = $this->container->call([$class, 'test'], [
-                DummyArg2::class => $arg3,
-                DummyArg4::class => $subarg1,
-            ], [
-                $arg1,
-                $arg5,
-            ]);
+                [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
 
-            [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
+                expect($p4)->to->be->an->instanceof(DummyArg3::class);
+                expect($p4->getContainer())->to->be->equal($this->wrapped);
+                expect($p4->getArg1())->to->be->equal($this->subarg1);
+                expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
+                expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal($this->expected);
 
-            expect($p4)->to->be->an->instanceof(DummyArg3::class);
-            expect($p4->getContainer())->to->be->equal($this->wrapped);
-            expect($p4->getArg1())->to->be->equal($subarg1);
-            expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
-            expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal([$arg1, $arg2, $arg3, $arg5, $arg6]);
+            });
+
+            it('should recursively inject the dependencies of callable arrays representing an instance method', function () {
+
+                $class = new class {
+
+                    public function test ($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6') {
+
+                        return [$arg1, $arg2, $arg3, $arg4, $arg5, $arg6];
+
+                    }
+
+                };
+
+                $cb = [$class, 'test'];
+
+                $test = $this->container->call($cb, $this->overrides, $this->parameters);
+
+                [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
+
+                expect($p4)->to->be->an->instanceof(DummyArg3::class);
+                expect($p4->getContainer())->to->be->equal($this->wrapped);
+                expect($p4->getArg1())->to->be->equal($this->subarg1);
+                expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
+                expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal($this->expected);
+
+            });
+
+            it('should recursively inject the dependencies of callable arrays representing a static method', function () {
+
+                $cb = ['DummyClassStatic', 'getInstance'];
+
+                $test = $this->container->call($cb, $this->overrides, $this->parameters);
+
+                [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
+
+                expect($p4)->to->be->an->instanceof(DummyArg3::class);
+                expect($p4->getContainer())->to->be->equal($this->wrapped);
+                expect($p4->getArg1())->to->be->equal($this->subarg1);
+                expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
+                expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal($this->expected);
+
+            });
+
+            it('should recursively inject the dependencies of static class method strings', function () {
+
+                $cb = ['DummyClassStatic', 'getInstance'];
+
+                $test = $this->container->call($cb, $this->overrides, $this->parameters);
+
+                [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
+
+                expect($p4)->to->be->an->instanceof(DummyArg3::class);
+                expect($p4->getContainer())->to->be->equal($this->wrapped);
+                expect($p4->getArg1())->to->be->equal($this->subarg1);
+                expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
+                expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal($this->expected);
+
+            });
 
         });
 
-        it('should work with static class method', function () {
+    });
 
-            $arg1 = 'arg1';
-            $arg2 = new DummyArg1('arg2');
-            $arg3 = new DummyArg2('arg3');
-            $arg5 = 'arg5';
-            $arg6 = 'arg6';
-            $subarg1 = new DummyArg4;
+    context('when a parameter can\'t be resolved', function () {
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg1::class)
-                ->andReturn(true);
+        describe('->make()', function () {
 
-            $this->wrapped->shouldReceive('get')
-                ->with(DummyArg1::class)
-                ->andReturn($arg2);
+            it('should fail', function () {
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg3::class)
-                ->andReturn(false);
+                $this->wrapped->shouldReceive('has')
+                    ->with(DummyClass::class)
+                    ->andReturn(false);
 
-            $this->wrapped->shouldReceive('has')
-                ->with(DummyArg5::class)
-                ->andReturn(false);
+                expect([$this->container, 'make'])->with(DummyClass::class)
+                    ->to->throw(NoValueDefinedForParameterException::class);
 
-            $test = $this->container->call('DummyClassStatic::getInstance', [
-                DummyArg2::class => $arg3,
-                DummyArg4::class => $subarg1,
-            ], [
-                $arg1,
-                $arg5,
-            ]);
-
-            [$p1, $p2, $p3, $p4, $p5, $p6] = $test;
-
-            expect($p4)->to->be->an->instanceof(DummyArg3::class);
-            expect($p4->getContainer())->to->be->equal($this->wrapped);
-            expect($p4->getArg1())->to->be->equal($subarg1);
-            expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
-            expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal([$arg1, $arg2, $arg3, $arg5, $arg6]);
+            });
 
         });
 
-        it('should fail when it cant resolve one parameter', function () {
+        describe('->call()', function () {
 
-            $cb = function ($arg1) {};
+            it('should fail', function () {
 
-            $test = function ($container) use ($cb) {
+                $cb = function ($arg1) {};
 
-                return $container->call($cb, []);
+                expect([$this->container, 'call'])->with($cb)
+                    ->to->throw(NoValueDefinedForParameterException::class);
 
-            };
-
-            expect($test)->with($this->container)->to->throw(NoValueDefinedForParameterException::class);
+            });
 
         });
 
