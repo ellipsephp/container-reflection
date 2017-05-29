@@ -129,6 +129,12 @@ class ReflectionContainer implements ContainerInterface
      */
     private function getResolvedParameters(array $parameters, array $overrides, array $values): array
     {
+        // add the container to the overrides so it can be injected.
+        $overrides = array_merge([
+            ContainerInterface::class => $this->container,
+        ], $overrides);
+
+        // resolve all the parameters.
         return array_map(function (ReflectionParameter $parameter) use ($overrides, &$values) {
 
             // when the parameter is type hinted as a class try to return an
