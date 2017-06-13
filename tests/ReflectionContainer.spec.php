@@ -119,6 +119,12 @@ describe('ReflectionContainer', function () {
 
     });
 
+    afterEach(function () {
+
+        Mockery::close();
+
+    });
+
     it('should implements container interface', function () {
 
         expect($this->container)->to->be->an->instanceof(ContainerInterface::class);
@@ -132,7 +138,7 @@ describe('ReflectionContainer', function () {
             $alias = 'test';
             $instance = new class {};
 
-            $this->wrapped->shouldReceive('get')
+            $this->wrapped->shouldReceive('get')->once()
                 ->with($alias)
                 ->andReturn($instance);
 
@@ -151,7 +157,7 @@ describe('ReflectionContainer', function () {
             $alias = 'test';
             $expected = true;
 
-            $this->wrapped->shouldReceive('has')
+            $this->wrapped->shouldReceive('has')->once()
                 ->with($alias)
                 ->andReturn($expected);
 
@@ -166,7 +172,7 @@ describe('ReflectionContainer', function () {
             $alias = 'test';
             $expected = false;
 
-            $this->wrapped->shouldReceive('has')
+            $this->wrapped->shouldReceive('has')->once()
                 ->with($alias)
                 ->andReturn($expected);
 
@@ -188,11 +194,11 @@ describe('ReflectionContainer', function () {
 
                     $instance = new class {};
 
-                    $this->wrapped->shouldReceive('has')
+                    $this->wrapped->shouldReceive('has')->once()
                         ->with(DummyClass::class)
                         ->andReturn(true);
 
-                    $this->wrapped->shouldReceive('get')
+                    $this->wrapped->shouldReceive('get')->once()
                         ->with(DummyClass::class)
                         ->andReturn($instance);
 
@@ -208,7 +214,7 @@ describe('ReflectionContainer', function () {
 
                 it('should return an instance of the class when it has no constructor', function () {
 
-                    $this->wrapped->shouldReceive('has')
+                    $this->wrapped->shouldReceive('has')->once()
                         ->with(DummyClassWithoutConstructor::class)
                         ->andReturn(false);
 
@@ -258,19 +264,19 @@ describe('ReflectionContainer', function () {
 
             $this->parameters = [$this->arg1, $this->arg5];
 
-            $this->wrapped->shouldReceive('has')
+            $this->wrapped->shouldReceive('has')->once()
                 ->with(DummyArg1::class)
                 ->andReturn(true);
 
-            $this->wrapped->shouldReceive('get')
+            $this->wrapped->shouldReceive('get')->once()
                 ->with(DummyArg1::class)
                 ->andReturn($this->arg2);
 
-            $this->wrapped->shouldReceive('has')
+            $this->wrapped->shouldReceive('has')->once()
                 ->with(DummyArg3::class)
                 ->andReturn(false);
 
-            $this->wrapped->shouldReceive('has')
+            $this->wrapped->shouldReceive('has')->once()
                 ->with(DummyArg5::class)
                 ->andReturn(false);
 
@@ -284,7 +290,7 @@ describe('ReflectionContainer', function () {
 
             it('should recursively inject the dependencies in class constructors', function () {
 
-                $this->wrapped->shouldReceive('has')
+                $this->wrapped->shouldReceive('has')->once()
                     ->with(DummyClass::class)
                     ->andReturn(false);
 
@@ -392,7 +398,7 @@ describe('ReflectionContainer', function () {
 
             it('should fail', function () {
 
-                $this->wrapped->shouldReceive('has')
+                $this->wrapped->shouldReceive('has')->once()
                     ->with(DummyClass::class)
                     ->andReturn(false);
 

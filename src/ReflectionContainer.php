@@ -150,8 +150,6 @@ class ReflectionContainer implements ContainerInterface
 
                 if (array_key_exists($name, $overrides)) return $overrides[$name];
 
-                if ($this->has($name)) return $this->get($name);
-
                 return $this->make($name, $overrides);
 
             }
