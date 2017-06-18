@@ -374,7 +374,7 @@ describe('ReflectionContainer', function () {
 
             it('should recursively inject the dependencies of static class method strings', function () {
 
-                $cb = ['DummyClassStatic', 'getInstance'];
+                $cb = 'DummyClassStatic::getInstance';
 
                 $test = $this->container->call($cb, $this->overrides, $this->parameters);
 
