@@ -1,10 +1,11 @@
 {
     "name": "ellipse/container",
     "type": "library",
-    "description": "Extra features for psr container",
+    "description": "Psr-11 container decorator with auto-wiring feature",
     "keywords": [
         "psr-11",
-        "container"
+        "container",
+        "dependency-injection"
     ],
     "license": "MIT",
     "homepage": "https://github.com/ellipsephp/container",
