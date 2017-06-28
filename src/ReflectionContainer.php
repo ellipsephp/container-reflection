@@ -9,7 +9,8 @@ use ReflectionParameter;
 
 use Psr\Container\ContainerInterface;
 
-use Ellipse\Container\Exceptions\NoValueDefinedForParameterException;
+use Ellipse\Container\Exceptions\ClassNotFoundException;
+use Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException;
 
 class ReflectionContainer implements ContainerInterface
 {
@@ -53,13 +54,21 @@ class ReflectionContainer implements ContainerInterface
      * @param array  $overrides
      * @param array  $values
      * @return mixed
+     * @throws \Ellipse\Container\Exceptions\ClassDoesNotExistException
      */
     public function make(string $class, array $overrides = [], array $values = [])
     {
+        // fail when the class does not exist.
+        if (! class_exists($class)) {
+
+            throw new ClassNotFoundException($class);
+
+        }
+
         // get the class from the container when it contains it.
         if ($this->has($class)) return $this->get($class);
 
-        // reflect the class constructor if any.
+        // get a reflection of the class constructor.
         $reflection = new ReflectionClass($class);
 
         $constructor = $reflection->getConstructor();
@@ -67,12 +76,13 @@ class ReflectionContainer implements ContainerInterface
         // when the class has no constructor just return a new instance.
         if (! $constructor) return new $class;
 
-        // otherwise resolve the constructor parameters values and create a new
-        // instance of the class using those values.
+        // get the constructor parameters.
         $parameters = $constructor->getParameters();
 
+        // try to resolve those parameters.
         $values = $this->getResolvedParameters($parameters, $overrides, $values);
 
+        // return an instance of the class.
         return $reflection->newInstanceArgs($values);
     }
 
@@ -99,10 +109,10 @@ class ReflectionContainer implements ContainerInterface
             ? new ReflectionMethod($callable[0], $callable[1])
             : new ReflectionFunction($callable);
 
-
         // resolve the callable parameters values.
         $parameters = $reflection->getParameters();
 
+        // try to resolve those parameters.
         $values = $this->getResolvedParameters($parameters, $overrides, $values);
 
         // when the callable is a function call it using those values.
@@ -128,14 +138,12 @@ class ReflectionContainer implements ContainerInterface
      * @param array $overrides
      * @param array $values
      * @return array
-     * @throws \Ellipse\Container\Exceptions\NoValueDefinedForParameterException
+     * @throws \Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException
      */
     private function getResolvedParameters(array $parameters, array $overrides, array $values): array
     {
         // add the container to the overrides so it can be injected.
-        $overrides = array_merge([
-            ContainerInterface::class => $this->container,
-        ], $overrides);
+        $overrides = array_merge([ContainerInterface::class => $this->container], $overrides);
 
         // resolve all the parameters.
         return array_map(function (ReflectionParameter $parameter) use ($overrides, &$values) {
@@ -165,7 +173,7 @@ class ReflectionContainer implements ContainerInterface
             }
 
             // fail when no value found.
-            throw new NoValueDefinedForParameterException($parameter);
+            throw new ParameterValueCantBeResolvedException($parameter);
 
         }, $parameters);
     }

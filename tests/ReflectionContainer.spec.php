@@ -3,7 +3,49 @@
 use Psr\Container\ContainerInterface;
 
 use Ellipse\Container\ReflectionContainer;
-use Ellipse\Container\Exceptions\NoValueDefinedForParameterException;
+use Ellipse\Container\Exceptions\ClassNotFoundException;
+use Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException;
+
+class DummyClassWithoutConstructor
+{
+    //
+}
+
+class DummyClassWithEmptyConstructor
+{
+    public function __construct()
+    {
+        //
+    }
+}
+
+class DummyClass
+{
+    private $parameters = [];
+
+    public function __construct($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6')
+    {
+        $this->parameters[] = $arg1;
+        $this->parameters[] = $arg2;
+        $this->parameters[] = $arg3;
+        $this->parameters[] = $arg4;
+        $this->parameters[] = $arg5;
+        $this->parameters[] = $arg6;
+    }
+
+    public function getParameters()
+    {
+        return $this->parameters;
+    }
+}
+
+class DummyClassStatic
+{
+    static public function getInstance ($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6')
+    {
+        return [$arg1, $arg2, $arg3, $arg4, $arg5, $arg6];
+    }
+}
 
 class DummyArg1
 {
@@ -72,42 +114,6 @@ class DummyArg4
 class DummyArg5
 {
     //
-}
-
-class DummyClass
-{
-    private $parameters = [];
-
-    public function __construct($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6')
-    {
-        $this->parameters[] = $arg1;
-        $this->parameters[] = $arg2;
-        $this->parameters[] = $arg3;
-        $this->parameters[] = $arg4;
-        $this->parameters[] = $arg5;
-        $this->parameters[] = $arg6;
-    }
-
-    public function getParameters()
-    {
-        return $this->parameters;
-    }
-}
-
-class DummyClassWithoutConstructor
-{
-    public function getParameters()
-    {
-        return [];
-    }
-}
-
-class DummyClassStatic
-{
-    static public function getInstance ($arg1, DummyArg1 $arg2, DummyArg2 $arg3, DummyArg3 $arg4, $arg5, $arg6 = 'arg6')
-    {
-        return [$arg1, $arg2, $arg3, $arg4, $arg5, $arg6];
-    }
 }
 
 describe('ReflectionContainer', function () {
@@ -184,35 +190,46 @@ describe('ReflectionContainer', function () {
 
     });
 
-    context('when no parameters need to be resolved', function () {
+    describe('->make()', function () {
 
-        describe('->make()', function () {
+        context('when the class does not exist', function () {
 
-            context('when the container contains an instance of the class', function () {
+            it('should fail', function () {
 
-                it('should return the instance of the class', function () {
-
-                    $instance = new class {};
-
-                    $this->wrapped->shouldReceive('has')->once()
-                        ->with(DummyClass::class)
-                        ->andReturn(true);
-
-                    $this->wrapped->shouldReceive('get')->once()
-                        ->with(DummyClass::class)
-                        ->andReturn($instance);
-
-                    $test = $this->container->make(DummyClass::class);
-
-                    expect($test)->to->be->equal($instance);
-
-                });
+                expect([$this->container, 'make'])->with('NonExistingClass')
+                    ->to->throw(ClassNotFoundException::class);
 
             });
 
-            context('when the container does not contain an instance of the class', function () {
+        });
 
-                it('should return an instance of the class when it has no constructor', function () {
+        context('when the container provides an instance of the class', function () {
+
+            it('should return the instance provided by the container', function () {
+
+                $instance = new class {};
+
+                $this->wrapped->shouldReceive('has')->once()
+                    ->with(DummyClass::class)
+                    ->andReturn(true);
+
+                $this->wrapped->shouldReceive('get')->once()
+                    ->with(DummyClass::class)
+                    ->andReturn($instance);
+
+                $test = $this->container->make(DummyClass::class);
+
+                expect($test)->to->be->equal($instance);
+
+            });
+
+        });
+
+        context('when the container does not provides an instance of the class', function () {
+
+            context('when the class has no constructor', function () {
+
+                it('should return an instance of the class', function () {
 
                     $this->wrapped->shouldReceive('has')->once()
                         ->with(DummyClassWithoutConstructor::class)
@@ -220,9 +237,38 @@ describe('ReflectionContainer', function () {
 
                     $test = $this->container->make(DummyClassWithoutConstructor::class);
 
-                    $parameters = $test->getParameters();
+                    expect($test)->to->be->an->instanceof(DummyClassWithoutConstructor::class);
 
-                    expect($parameters)->to->be->equal([]);
+                });
+
+            });
+
+            context('when the constructor has no parameter', function () {
+
+                it('should return an instance of the class', function () {
+
+                    $this->wrapped->shouldReceive('has')->once()
+                        ->with(DummyClassWithEmptyConstructor::class)
+                        ->andReturn(false);
+
+                    $test = $this->container->make(DummyClassWithEmptyConstructor::class);
+
+                    expect($test)->to->be->an->instanceof(DummyClassWithEmptyConstructor::class);
+
+                });
+
+            });
+
+            context('when a constructor parameter value can\'t be resolved', function () {
+
+                it('should fail', function () {
+
+                    $this->wrapped->shouldReceive('has')->once()
+                        ->with(DummyClass::class)
+                        ->andReturn(false);
+
+                    expect([$this->container, 'make'])->with(DummyClass::class)
+                        ->to->throw(ParameterValueCantBeResolvedException::class);
 
                 });
 
@@ -230,15 +276,32 @@ describe('ReflectionContainer', function () {
 
         });
 
-        describe('->call()', function () {
+    });
 
-            it('should execute the callable', function () {
+    describe('->call()', function () {
+
+        context('when the callable has no parameter', function () {
+
+            it('should return the value produced by the callable', function () {
 
                 $cb = function () { return 'value'; };
 
                 $test = $this->container->call($cb);
 
                 expect($test)->to->be->equal('value');
+
+            });
+
+        });
+
+        context('when a parameter can\'t be resolved', function () {
+
+            it('should fail', function () {
+
+                $cb = function ($p) {};
+
+                expect([$this->container, 'call'])->with($cb)
+                    ->to->throw(ParameterValueCantBeResolvedException::class);
 
             });
 
@@ -385,38 +448,6 @@ describe('ReflectionContainer', function () {
                 expect($p4->getArg1())->to->be->equal($this->subarg1);
                 expect($p4->getArg2())->to->be->an->instanceof(DummyArg5::class);
                 expect([$p1, $p2, $p3, $p5, $p6])->to->be->equal($this->expected);
-
-            });
-
-        });
-
-    });
-
-    context('when a parameter can\'t be resolved', function () {
-
-        describe('->make()', function () {
-
-            it('should fail', function () {
-
-                $this->wrapped->shouldReceive('has')->once()
-                    ->with(DummyClass::class)
-                    ->andReturn(false);
-
-                expect([$this->container, 'make'])->with(DummyClass::class)
-                    ->to->throw(NoValueDefinedForParameterException::class);
-
-            });
-
-        });
-
-        describe('->call()', function () {
-
-            it('should fail', function () {
-
-                $cb = function ($arg1) {};
-
-                expect([$this->container, 'call'])->with($cb)
-                    ->to->throw(NoValueDefinedForParameterException::class);
 
             });
 

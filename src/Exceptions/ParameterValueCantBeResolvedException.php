@@ -5,12 +5,12 @@ namespace Ellipse\Container\Exceptions;
 use RuntimeException;
 use ReflectionParameter;
 
-class NoValueDefinedForParameterException extends RuntimeException implements ContainerExceptionInterface
+class ParameterValueCantBeResolvedException extends RuntimeException implements ContainerExceptionInterface
 {
     public function __construct(ReflectionParameter $parameter)
     {
         $name = $parameter->getName();
 
-        parent::__construct(sprintf('No value defined for parameter %s.', $name));
+        parent::__construct(sprintf('Value can\'t be resolved for the parameter \'$%s\'', $name));
     }
 }
