@@ -8,6 +8,6 @@ class InterfaceImplementationNotProvidedException extends RuntimeException imple
 {
     public function __construct(string $interface)
     {
-        parent::__construct(sprintf('No implementation provided by the container for interface \'%s\'', $interface));
+        parent::__construct(sprintf('No implementation provided by the container for the interface \'%s\'', $interface));
     }
 }
