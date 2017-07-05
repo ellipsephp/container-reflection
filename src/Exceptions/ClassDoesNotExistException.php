@@ -3,9 +3,8 @@
 namespace Ellipse\Container\Exceptions;
 
 use RuntimeException;
-use ReflectionParameter;
 
-class ClassNotFoundException extends RuntimeException implements ContainerExceptionInterface
+class ClassDoesNotExistException extends RuntimeException implements ContainerExceptionInterface
 {
     public function __construct(string $class)
     {

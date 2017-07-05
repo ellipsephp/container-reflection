@@ -9,7 +9,9 @@ use ReflectionParameter;
 
 use Psr\Container\ContainerInterface;
 
-use Ellipse\Container\Exceptions\ClassNotFoundException;
+use Ellipse\Container\Exceptions\ClassDoesNotExistException;
+use Ellipse\Container\Exceptions\InterfaceImplementationNotProvidedException;
+use Ellipse\Container\Exceptions\AbstractClassImplementationNotProvidedException;
 use Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException;
 
 class ReflectionContainer implements ContainerInterface
@@ -54,23 +56,43 @@ class ReflectionContainer implements ContainerInterface
      * @param array  $overrides
      * @param array  $values
      * @return mixed
-     * @throws \Ellipse\Container\Exceptions\ClassDoesNotExistException
+     * @throws Ellipse\Container\Exceptions\ClassDoesNotExistException
+     * @throws Ellipse\Container\Exceptions\InterfaceImplementationNotProvidedException
+     * @throws Ellipse\Container\Exceptions\AbstractClassImplementationNotProvidedException
      */
     public function make(string $class, array $overrides = [], array $values = [])
     {
-        // fail when the class does not exist.
-        if (! class_exists($class)) {
+        // when the alias is an interface name return what is provided by the
+        // container or fail.
+        if (interface_exists($class)) {
 
-            throw new ClassNotFoundException($class);
+            if ($this->has($class)) return $this->get($class);
+
+            throw new InterfaceImplementationNotProvidedException($class);
 
         }
 
-        // get the class from the container when it contains it.
+        // fail when the alias is not an existing class name.
+        if (! class_exists($class)) {
+
+            throw new ClassDoesNotExistException($class);
+
+        }
+
+        // returns whats provided by the container for this alias if any.
         if ($this->has($class)) return $this->get($class);
 
-        // get a reflection of the class constructor.
+        // get a reflection of the class.
         $reflection = new ReflectionClass($class);
 
+        // fail when the alias is an abstract class name.
+        if ($reflection->isAbstract()) {
+
+            throw new AbstractClassImplementationNotProvidedException($class);
+
+        }
+
+        // get the class constructor.
         $constructor = $reflection->getConstructor();
 
         // when the class has no constructor just return a new instance.

@@ -3,8 +3,20 @@
 use Psr\Container\ContainerInterface;
 
 use Ellipse\Container\ReflectionContainer;
-use Ellipse\Container\Exceptions\ClassNotFoundException;
+use Ellipse\Container\Exceptions\ClassDoesNotExistException;
+use Ellipse\Container\Exceptions\InterfaceImplementationNotProvidedException;
+use Ellipse\Container\Exceptions\AbstractClassImplementationNotProvidedException;
 use Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException;
+
+interface DummyInterface
+{
+    //
+}
+
+abstract class DummyAbstractClass
+{
+    //
+}
 
 class DummyClassWithoutConstructor
 {
@@ -192,83 +204,147 @@ describe('ReflectionContainer', function () {
 
     describe('->make()', function () {
 
-        context('when the class does not exist', function () {
+        context('when the given alias is an interface name', function () {
 
-            it('should fail', function () {
+            context('and an implementation is provided by the container', function () {
 
-                expect([$this->container, 'make'])->with('NonExistingClass')
-                    ->to->throw(ClassNotFoundException::class);
+                it('should return the implementation provided by the container', function () {
 
-            });
-
-        });
-
-        context('when the container provides an instance of the class', function () {
-
-            it('should return the instance provided by the container', function () {
-
-                $instance = new class {};
-
-                $this->wrapped->shouldReceive('has')->once()
-                    ->with(DummyClass::class)
-                    ->andReturn(true);
-
-                $this->wrapped->shouldReceive('get')->once()
-                    ->with(DummyClass::class)
-                    ->andReturn($instance);
-
-                $test = $this->container->make(DummyClass::class);
-
-                expect($test)->to->be->equal($instance);
-
-            });
-
-        });
-
-        context('when the container does not provides an instance of the class', function () {
-
-            context('when the class has no constructor', function () {
-
-                it('should return an instance of the class', function () {
+                    $implementation = new class {};
 
                     $this->wrapped->shouldReceive('has')->once()
-                        ->with(DummyClassWithoutConstructor::class)
-                        ->andReturn(false);
+                        ->with(DummyInterface::class)
+                        ->andReturn(true);
 
-                    $test = $this->container->make(DummyClassWithoutConstructor::class);
+                    $this->wrapped->shouldReceive('get')->once()
+                        ->with(DummyInterface::class)
+                        ->andReturn($implementation);
 
-                    expect($test)->to->be->an->instanceof(DummyClassWithoutConstructor::class);
+                    $test = $this->container->make(DummyInterface::class);
+
+                    expect($test)->to->be->equal($implementation);
 
                 });
 
             });
 
-            context('when the constructor has no parameter', function () {
-
-                it('should return an instance of the class', function () {
-
-                    $this->wrapped->shouldReceive('has')->once()
-                        ->with(DummyClassWithEmptyConstructor::class)
-                        ->andReturn(false);
-
-                    $test = $this->container->make(DummyClassWithEmptyConstructor::class);
-
-                    expect($test)->to->be->an->instanceof(DummyClassWithEmptyConstructor::class);
-
-                });
-
-            });
-
-            context('when a constructor parameter value can\'t be resolved', function () {
+            context('and no implementation is provided by the container', function () {
 
                 it('should fail', function () {
 
                     $this->wrapped->shouldReceive('has')->once()
-                        ->with(DummyClass::class)
+                        ->with(DummyInterface::class)
                         ->andReturn(false);
 
-                    expect([$this->container, 'make'])->with(DummyClass::class)
-                        ->to->throw(ParameterValueCantBeResolvedException::class);
+                    expect([$this->container, 'make'])->with(DummyInterface::class)
+                        ->to->throw(InterfaceImplementationNotProvidedException::class);
+
+                });
+
+            });
+
+        });
+
+        context('when the alias is a class name', function () {
+
+            context('and the class does not exists', function () {
+
+                it('should fail', function () {
+
+                    expect([$this->container, 'make'])->with('NonExistingClass')
+                        ->to->throw(ClassDoesNotExistException::class);
+
+                });
+
+            });
+
+            context('and the class exists', function () {
+
+                context('and an instance is provided by the container', function () {
+
+                    it('should return the instance provided by the container', function () {
+
+                        $instance = new class {};
+
+                        $this->wrapped->shouldReceive('has')->once()
+                            ->with(DummyClass::class)
+                            ->andReturn(true);
+
+                        $this->wrapped->shouldReceive('get')->once()
+                            ->with(DummyClass::class)
+                            ->andReturn($instance);
+
+                        $test = $this->container->make(DummyClass::class);
+
+                        expect($test)->to->be->equal($instance);
+
+                    });
+
+                });
+
+                context('and no instance is provided by the container', function () {
+
+                    context('and the class is an abstract class', function () {
+
+                        it('should fail', function () {
+
+                            $this->wrapped->shouldReceive('has')->once()
+                                ->with(DummyAbstractClass::class)
+                                ->andReturn(false);
+
+                            expect([$this->container, 'make'])->with(DummyAbstractClass::class)
+                                ->to->throw(AbstractClassImplementationNotProvidedException::class);
+
+                        });
+
+                    });
+
+                    context('and the class has no constructor', function () {
+
+                        it('should return an instance of the class', function () {
+
+                            $this->wrapped->shouldReceive('has')->once()
+                                ->with(DummyClassWithoutConstructor::class)
+                                ->andReturn(false);
+
+                            $test = $this->container->make(DummyClassWithoutConstructor::class);
+
+                            expect($test)->to->be->an->instanceof(DummyClassWithoutConstructor::class);
+
+                        });
+
+                    });
+
+                    context('and the class constructor has no parameters', function () {
+
+                        it('should return an instance of the class', function () {
+
+                            $this->wrapped->shouldReceive('has')->once()
+                                ->with(DummyClassWithEmptyConstructor::class)
+                                ->andReturn(false);
+
+                            $test = $this->container->make(DummyClassWithEmptyConstructor::class);
+
+                            expect($test)->to->be->an->instanceof(DummyClassWithEmptyConstructor::class);
+
+                        });
+
+                    });
+
+                    context('and a constructor parameter value can\'t be resolved', function () {
+
+                        it('should fail', function () {
+
+                            $this->wrapped->shouldReceive('has')->once()
+                                ->with(DummyClass::class)
+                                ->andReturn(false);
+
+                            expect([$this->container, 'make'])->with(DummyClass::class)
+                                ->to->throw(ParameterValueCantBeResolvedException::class);
+
+                        });
+
+                    });
 
                 });
 

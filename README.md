@@ -55,7 +55,7 @@ The `->make(string $class)` method of the `ReflectionContainer` class allows to 
 
 When a parameter is type hinted as `Psr\Container\ContainerInterface`, the decorated container will be injected.
 
-When the given class does not exists, the `ReflectionContainer` instance will throw a `Ellipse\Container\Exceptions\ClassNotFoundException`.
+When the given class does not exists, the `ReflectionContainer` instance will throw a `Ellipse\Container\Exceptions\ClassDoesNotExistException`.
 
 Please note a new instance of the class is created on every `->make()` call. If a singleton is needed, it has to be defined in the container.
 
