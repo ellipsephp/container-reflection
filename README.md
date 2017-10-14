@@ -1,4 +1,4 @@
-# Container
+# Reflection container
 
 This package provides a **[Psr-11 container](https://github.com/container-interop/fig-standards/blob/master/proposed/container.md) decorator**.
 
@@ -6,7 +6,7 @@ It allows to add extra features like **auto-wiring** and **callable dependency i
 
 **Require** php >= 7.1
 
-**Installation** `composer require ellipse/container`
+**Installation** `composer require ellipse/container-reflection`
 
 **Run tests** `./vendor/bin/peridot tests`
 
@@ -24,7 +24,7 @@ First of all, nothing to worry about the `->get()` and `->has()` methods of the 
 ```php
 <?php
 
-use Simplex\Container;
+use Some\Container;
 use Ellipse\Container\ReflectionContainer;
 use App\SomeInterface;
 use App\SomeImplementation;
@@ -32,7 +32,7 @@ use App\SomeImplementation;
 // Get a new instance of some Psr-11 container.
 $container = new Container();
 
-// Add some definitions.
+// Add some definitions. Depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     return new SomeImplementation;
@@ -40,11 +40,11 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$reflection = new ReflectionContainer($container);
+$decorated = new ReflectionContainer($container);
 
 // The get and has methods of the decorated container are proxied.
-$reflection->has(SomeInterface::class); // returns true.
-$reflection->get(SomeInterface::class); // returns the SomeImplementation instance provided by the container.
+$decorated->has(SomeInterface::class); // returns true.
+$decorated->get(SomeInterface::class); // returns the SomeImplementation instance provided by the container.
 ```
 
 But now the container has two new useful method, the `->make(string $class)` method (see [Auto-wiring](#auto-wiring)) and the `->call(callable $callable)` method (see [Callable dependency injection](#callable-dependency-injection)).
@@ -90,7 +90,7 @@ class SomeOtherClass
 ```php
 <?php
 
-use Simplex\Container;
+use Some\Container;
 use Ellipse\Container\ReflectionContainer;
 use App\SomeService;
 use App\SomeInterface;
@@ -99,7 +99,7 @@ use App\SomeImplementation;
 // Get a new instance of some Psr-11 container.
 $container = new Container();
 
-// Add some definitions.
+// Add some definitions. Depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     // Special construction logic ...
@@ -111,15 +111,15 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$reflection = new ReflectionContainer($container);
+$decorated = new ReflectionContainer($container);
 
 // The container does not contains SomeService.
-$reflection->has(SomeService::class); // returns false.
+$decorated->has(SomeService::class); // returns false.
 
 // Yet an instance of SomeService can be constructed.
 // The SomeImplementation instance provided by the container gets injected.
 // SomeOtherClass and YetSomeOtherClass gets constructed by recursively using ->make().
-$reflection->make(SomeService::class);
+$decorated->make(SomeService::class);
 ```
 
 ## Callable dependency injection
@@ -143,7 +143,7 @@ class SomeClass
 ```php
 <?php
 
-use Simplex\Container;
+use Some\Container;
 use Ellipse\Container\ReflectionContainer;
 use App\SomeInterface;
 use App\SomeImplementation;
@@ -152,7 +152,7 @@ use App\SomeClass;
 // Get a new instance of some Psr-11 container.
 $container = new Container();
 
-// Add some definitions.
+// Add some definitions. Depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     // Special construction logic ...
@@ -164,7 +164,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$reflection = new ReflectionContainer($container);
+$decorated = new ReflectionContainer($container);
 
 // Get some callable.
 $some_callable = function (SomeInterface $a, SomeClass $b) {
@@ -177,7 +177,7 @@ $some_callable = function (SomeInterface $a, SomeClass $b) {
 
 // The SomeImplementation instance provided by the container gets injected.
 // SomeClass and SomeOtherClass gets constructed by recursively using ->make().
-$reflection->call($some_callable); // returns 'some_results'.
+$decorated->call($some_callable); // returns 'some_results'.
 ```
 
 ## Injecting at runtime
@@ -195,7 +195,7 @@ When no value can be resolved for one parameter, its default value will be used.
 
 use Psr\Http\Message\ServerRequestInterface;
 
-use Simplex\Container;
+use Some\Container;
 use Ellipse\Container\ReflectionContainer;
 use App\SomeInterface;
 use App\SomeImplementation;
@@ -203,7 +203,7 @@ use App\SomeImplementation;
 // Get a new instance of some Psr-11 container.
 $container = new Container();
 
-// Add some definitions.
+// Add some definitions. Depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     // Special construction logic ...
@@ -215,7 +215,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$reflection = new ReflectionContainer($container);
+$decorated = new ReflectionContainer($container);
 
 // Get a specific instance of ServerRequestInterface.
 $request = get_request_from_somewhere();
@@ -230,7 +230,6 @@ $some_callable = function (ServerRequestInterface $request, SomeInterface $a, $b
 
 };
 
-$reflection->call($some_callable, [
-    ServerRequestInterface::class => $request,
-], ['b', 'c']);
+// Call $some_callable with the given injected values.
+$decorated->call($some_callable, [ServerRequestInterface::class => $request], ['b', 'c']);
 ```

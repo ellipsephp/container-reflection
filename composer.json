@@ -1,17 +1,21 @@
 {
-    "name": "ellipse/container",
+    "name": "ellipse/container-reflection",
     "type": "library",
-    "description": "Psr-11 container decorator with auto-wiring feature",
+    "description": "Psr-11 container decorator providing autowiring feature",
     "keywords": [
         "psr-11",
         "container",
-        "dependency-injection"
+        "dependency-injection",
+        "decorator",
+        "autowiring",
+        "callable-dependency-injection",
+        "runtime-dependency-injection"
     ],
     "license": "MIT",
-    "homepage": "https://github.com/ellipsephp/container",
+    "homepage": "https://github.com/ellipsephp/container-reflection",
     "support": {
-        "issues": "https://github.com/ellipsephp/container/issues",
-        "source": "https://github.com/ellipsephp/container"
+        "issues": "https://github.com/ellipsephp/container-reflection/issues",
+        "source": "https://github.com/ellipsephp/container-reflection"
     },
     "authors": [
         {
