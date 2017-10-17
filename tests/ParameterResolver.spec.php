@@ -131,6 +131,23 @@ describe('ParameterResolver', function () {
 
                     });
 
+                    it('should return null if the default value is null', function () {
+
+                        $this->parameter->isDefaultValueAvailable->returns(true);
+                        $this->parameter->getDefaultValue->returns(null);
+
+                        $test = $this->resolver->resolve(
+                            $this->container->get(),
+                            $this->parameter->get()
+                        );
+
+                        expect($test)->toEqual([null, []]);
+                        $this->parameter->getClass->called();
+                        $this->parameter->isDefaultValueAvailable->called();
+                        $this->parameter->getDefaultValue->called();
+
+                    });
+
                 });
 
                 context('when the parameter does not have a default value', function () {

@@ -31,12 +31,16 @@ class ParameterResolver
 
             $value = $overrides[$name] ?? $container->make($name, $overrides);
 
+            return [$value, $defaults];
+
         }
 
         // when there is default values, extract the first one and return it.
         elseif (count($defaults) > 0) {
 
             $value = array_shift($defaults);
+
+            return [$value, $defaults];
 
         }
 
@@ -45,10 +49,12 @@ class ParameterResolver
 
             $value = $parameter->getDefaultValue();
 
+            return [$value, $defaults];
+
         }
 
-        // when a value has been resolved return it with the new defaults.
-        if (isset($value)) return [$value, $defaults];
+        // can't check here if value is set because the default value can be
+        // null.
 
         // fail when no value has been resolved.
         throw new ParameterValueCantBeResolvedException($parameter);
