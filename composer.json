@@ -25,13 +25,11 @@
     ],
     "require": {
         "php": ">=7.1",
-        "psr/container": "^1.0",
-        "mindplay/readable": "^1.1"
+        "psr/container": "^1.0"
     },
     "require-dev": {
-        "peridot-php/peridot": "^1.19",
-        "peridot-php/leo": "^1.6",
-        "mockery/mockery": "^1.0@alpha"
+        "kahlan/kahlan": "^4.0",
+        "eloquent/phony-kahlan": "^1.0"
     },
     "autoload": {
         "psr-4": {

@@ -8,7 +8,7 @@ It allows to add extra features like **auto-wiring** and **callable dependency i
 
 **Installation** `composer require ellipse/container-reflection`
 
-**Run tests** `./vendor/bin/peridot tests`
+**Run tests** `./vendor/bin/kahlan --spec=tests`
 
 * [Decorating a container](#decorating-a-container)
 * [Auto-wiring](#auto-wiring)
@@ -40,7 +40,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = new ReflectionContainer($container);
+$decorated = ReflectionContainer::decorate($container);
 
 // The get and has methods of the decorated container are proxied.
 $decorated->has(SomeInterface::class); // returns true.
@@ -111,7 +111,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = new ReflectionContainer($container);
+$decorated = ReflectionContainer::decorate($container);
 
 // The container does not contains SomeService.
 $decorated->has(SomeService::class); // returns false.
@@ -164,7 +164,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = new ReflectionContainer($container);
+$decorated = ReflectionContainer::decorate($container);
 
 // Get some callable.
 $some_callable = function (SomeInterface $a, SomeClass $b) {
@@ -215,7 +215,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = new ReflectionContainer($container);
+$decorated = ReflectionContainer::decorate($container);
 
 // Get a specific instance of ServerRequestInterface.
 $request = get_request_from_somewhere();

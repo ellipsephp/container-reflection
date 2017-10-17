@@ -2,17 +2,10 @@
 
 namespace Ellipse\Container;
 
-use ReflectionClass;
-use ReflectionMethod;
-use ReflectionFunction;
-use ReflectionParameter;
-
 use Psr\Container\ContainerInterface;
 
-use Ellipse\Container\Exceptions\ClassDoesNotExistException;
-use Ellipse\Container\Exceptions\InterfaceImplementationNotProvidedException;
-use Ellipse\Container\Exceptions\AbstractClassImplementationNotProvidedException;
-use Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException;
+use Ellipse\Container\Exceptions\ClassNotFoundException;
+use Ellipse\Container\Exceptions\ImplementationNotDefinedException;
 
 class ReflectionContainer implements ContainerInterface
 {
@@ -24,13 +17,49 @@ class ReflectionContainer implements ContainerInterface
     private $container;
 
     /**
-     * Set up a reflection container with the underlying container to decorate.
+     * The reflector.
      *
-     * @param \Psr\Container\ContainerInterface
+     * @var \Ellipse\Container\Reflector
      */
-    public function __construct(ContainerInterface $container)
+    private $reflector;
+
+    /**
+     * The resolver.
+     *
+     * @var \Ellipse\Container\Resolver
+     */
+    private $resolver;
+
+    /**
+     * Return a ReflectionContainer decorating the given container.
+     *
+     * @param \Psr\Container\ContainerInterface $container
+     * @return \Ellipse\Container\ReflectionContainer
+     */
+    public static function decorate(ContainerInterface $container)
     {
+        $reflector = new Reflector;
+        $resolver = Resolver::getInstance();
+
+        return new ReflectionContainer($container, $reflector, $resolver);
+    }
+
+    /**
+     * Set up a reflection container with the underlying container to decorate,
+     * the given reflector and the given resolver.
+     *
+     * @param \Psr\Container\ContainerInterface $container
+     * @param \Ellipse\Container\Reflector      $reflector
+     * @param \Ellipse\Container\Resolver       $resolver
+     */
+    public function __construct(
+        ContainerInterface $container,
+        Reflector $reflector,
+        Resolver $resolver
+    ) {
         $this->container = $container;
+        $this->reflector = $reflector;
+        $this->resolver = $resolver;
     }
 
     /**
@@ -50,62 +79,46 @@ class ReflectionContainer implements ContainerInterface
     }
 
     /**
-     * Make an instance of the given class.
+     * Make an instance of the given class with the given overrides and default
+     * values.
      *
-     * @param string $class
+     * @param string $id
      * @param array  $overrides
-     * @param array  $values
+     * @param array  $defaults
      * @return mixed
-     * @throws Ellipse\Container\Exceptions\ClassDoesNotExistException
-     * @throws Ellipse\Container\Exceptions\InterfaceImplementationNotProvidedException
-     * @throws Ellipse\Container\Exceptions\AbstractClassImplementationNotProvidedException
+     * @throws Ellipse\Container\Exceptions\ClassNotFoundException
+     * @throws Ellipse\Container\Exceptions\ImplementationNotDefinedException
      */
-    public function make(string $class, array $overrides = [], array $values = [])
+    public function make(string $id, array $overrides = [], array $defaults = [])
     {
-        // when the alias is an interface name return what is provided by the
-        // container or fail.
-        if (interface_exists($class)) {
+        // ensure the id is an interface or class name.
+        if (! interface_exists($id) && ! class_exists($id)) {
 
-            if ($this->has($class)) return $this->get($class);
-
-            throw new InterfaceImplementationNotProvidedException($class);
+            throw new ClassNotFoundException($id);
 
         }
 
-        // fail when the alias is not an existing class name.
-        if (! class_exists($class)) {
-
-            throw new ClassDoesNotExistException($class);
-
-        }
-
-        // returns whats provided by the container for this alias if any.
-        if ($this->has($class)) return $this->get($class);
+        // if the container contains the service, return the .
+        if ($this->has($id)) return $this->get($id);
 
         // get a reflection of the class.
-        $reflection = new ReflectionClass($class);
+        $reflected = $this->reflector->getReflectedClass($id);
 
-        // fail when the alias is an abstract class name.
-        if ($reflection->isAbstract()) {
+        // fail when the alias is not instantiable.
+        if (! $reflected->isInstantiable()) {
 
-            throw new AbstractClassImplementationNotProvidedException($class);
+            throw new ImplementationNotDefinedException($id);
 
         }
 
-        // get the class constructor.
-        $constructor = $reflection->getConstructor();
-
-        // when the class has no constructor just return a new instance.
-        if (! $constructor) return new $class;
-
-        // get the constructor parameters.
-        $parameters = $constructor->getParameters();
+        // get the class constructor parameters.
+        $parameters = $reflected->getParameters();
 
         // try to resolve those parameters.
-        $values = $this->getResolvedParameters($parameters, $overrides, $values);
+        $values = $this->resolver->map($this, $parameters, $overrides, $defaults);
 
         // return an instance of the class.
-        return $reflection->newInstanceArgs($values);
+        return new $id(...$values);
     }
 
     /**
@@ -119,84 +132,13 @@ class ReflectionContainer implements ContainerInterface
      */
     public function call(callable $callable, array $overrides = [], array $values = [])
     {
-        // make a callable array from a callable string.
-        if (is_string($callable) and strpos($callable, '::') !== false) {
-
-            $callable = explode('::', $callable);
-
-        }
-
-        // reflect a class method or a function according to the callable type.
-        $reflection = is_array($callable)
-            ? new ReflectionMethod($callable[0], $callable[1])
-            : new ReflectionFunction($callable);
-
-        // resolve the callable parameters values.
-        $parameters = $reflection->getParameters();
+        // get a reflection of the class.
+        $parameters = $this->reflector->getReflectedParameters($callable);
 
         // try to resolve those parameters.
-        $values = $this->getResolvedParameters($parameters, $overrides, $values);
+        $values = $this->resolver->map($this, $parameters, $overrides, $values);
 
-        // when the callable is a function call it using those values.
-        if ($reflection instanceof ReflectionFunction) {
-
-            return $reflection->invokeArgs($values);
-
-        }
-
-        // otherwise get the method's class and call the method with the
-        // resolved parameters values. The class instance is null when the
-        // method is static.
-        $instance = ! $reflection->isStatic() ? $callable[0] : null;
-
-        return $reflection->invokeArgs($instance, $values);
-    }
-
-    /**
-     * Resolve the list of values to use as parameters from the given list of
-     * reflection parameters and the given overrides.
-     *
-     * @param array $parameters
-     * @param array $overrides
-     * @param array $values
-     * @return array
-     * @throws \Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException
-     */
-    private function getResolvedParameters(array $parameters, array $overrides, array $values): array
-    {
-        // add the container to the overrides so it can be injected.
-        $overrides = array_merge([ContainerInterface::class => $this->container], $overrides);
-
-        // resolve all the parameters.
-        return array_map(function (ReflectionParameter $parameter) use ($overrides, &$values) {
-
-            // when the parameter is type hinted as a class try to return an
-            // override named like this class. If no override is named like this
-            // then retrieve an instance of this class from the container when
-            // it contains the classname or make a new instance.
-            if ($class = $parameter->getClass()) {
-
-                $name = $class->getName();
-
-                if (array_key_exists($name, $overrides)) return $overrides[$name];
-
-                return $this->make($name, $overrides);
-
-            }
-
-            // get the next value in the list.
-            if (count($values) > 0) return array_shift($values);
-
-            // finally try to return the parameter default value if any.
-            if ($parameter->isDefaultValueAvailable()) {
-
-                return $parameter->getDefaultValue();
-
-            }
-
-            // fail when no value found.
-            throw new ParameterValueCantBeResolvedException($parameter);
-
-        }, $parameters);
+        // call the callable with those values.
+        return $callable(...$values);
     }
 }
