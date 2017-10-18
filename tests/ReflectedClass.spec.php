@@ -3,6 +3,7 @@
 use function Eloquent\Phony\Kahlan\mock;
 
 use Ellipse\Container\ReflectedClass;
+use Ellipse\Container\ReflectedParameter;
 
 describe('ReflectedClass', function () {
 
@@ -10,7 +11,7 @@ describe('ReflectedClass', function () {
 
         $this->reflection = mock(ReflectionClass::class);
 
-        $this->reflected = new ReflectedClass($this->reflection->get());
+        $this->class = new ReflectedClass($this->reflection->get());
 
     });
 
@@ -23,7 +24,7 @@ describe('ReflectedClass', function () {
                 $this->reflection->isInterface->returns(true);
                 $this->reflection->isAbstract->returns(false);
 
-                $test = $this->reflected->isInstantiable();
+                $test = $this->class->isInstantiable();
 
                 expect($test)->toBe(false);
                 $this->reflection->isInterface->called();
@@ -39,7 +40,7 @@ describe('ReflectedClass', function () {
                 $this->reflection->isInterface->returns(false);
                 $this->reflection->isAbstract->returns(true);
 
-                $test = $this->reflected->isInstantiable();
+                $test = $this->class->isInstantiable();
 
                 expect($test)->toBe(false);
                 $this->reflection->isAbstract->called();
@@ -55,7 +56,7 @@ describe('ReflectedClass', function () {
                 $this->reflection->isInterface->returns(false);
                 $this->reflection->isAbstract->returns(false);
 
-                $test = $this->reflected->isInstantiable();
+                $test = $this->class->isInstantiable();
 
                 expect($test)->toBe(true);
                 $this->reflection->isInterface->called();
@@ -67,7 +68,7 @@ describe('ReflectedClass', function () {
 
     });
 
-    describe('->getParameters()', function () {
+    describe('->getReflectedParameters()', function () {
 
         context('when the class does not have a constructor', function () {
 
@@ -75,7 +76,7 @@ describe('ReflectedClass', function () {
 
                 $this->reflection->getConstructor->returns(null);
 
-                $test = $this->reflected->getParameters();
+                $test = $this->class->getReflectedParameters();
 
                 expect($test)->toEqual([]);
                 $this->reflection->getConstructor->called();
@@ -86,7 +87,7 @@ describe('ReflectedClass', function () {
 
         context('when the class have a constructor', function () {
 
-            it('should return the constructor parameters', function () {
+            it('should return an array of reflected parameters from the class constructor', function () {
 
                 $parameters = [
                     mock(ReflectionParameter::class)->get(),
@@ -100,9 +101,13 @@ describe('ReflectedClass', function () {
 
                 $this->reflection->getConstructor->returns($constructor);
 
-                $test = $this->reflected->getParameters();
+                $test = $this->class->getReflectedParameters();
 
-                expect($test)->toEqual($parameters);
+                expect($test)->toBeAn('array');
+                expect($test)->toHaveLength(3);
+                expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+                expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
+                expect($test[2])->toBeAnInstanceOf(ReflectedParameter::class);
                 $this->reflection->getConstructor->called();
                 $constructor->getParameters->called();
 

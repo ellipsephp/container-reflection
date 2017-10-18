@@ -6,26 +6,42 @@ use ReflectionParameter;
 
 use Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException;
 
-class ParameterResolver
+class ReflectedParameter
 {
     /**
-     * Return an array containing the resolved value and the new defaults array.
+     * The reflection parameter.
+     *
+     * @var \ReflectionParameter
+     */
+    private $reflection;
+
+    /**
+     * Set up a reflected parameter from the given reflection parameter.
+     *
+     * @param \ReflectionParameter $reflection
+     */
+    public function __construct(ReflectionParameter $reflection)
+    {
+        $this->reflection = $reflection;
+    }
+
+    /**
+     * Return an array containing the resolved values of this parameter and the
+     * new default values array.
      *
      * @param \Ellipse\Container\ReflectionContainer    $container
-     * @param \ReflectionParameter                      $parameter
      * @param array                                     $overrides
      * @param array                                     $defaults
      * @return array
      */
-    public function resolve(
+    public function getValue(
         ReflectionContainer $container,
-        ReflectionParameter $parameter,
         array $overrides = [],
         array $defaults = []
     ): array {
         // when the parameter is type hinted as a class retrun either its
         // overrided value or an instance made through the container.
-        if ($class = $parameter->getClass()) {
+        if ($class = $this->reflection->getClass()) {
 
             $name = $class->getName();
 
@@ -36,7 +52,7 @@ class ParameterResolver
         }
 
         // when there is default values, extract the first one and return it.
-        elseif (count($defaults) > 0) {
+        if (count($defaults) > 0) {
 
             $value = array_shift($defaults);
 
@@ -45,9 +61,9 @@ class ParameterResolver
         }
 
         // when the parameter has a default value return it.
-        elseif ($parameter->isDefaultValueAvailable()) {
+        if ($this->reflection->isDefaultValueAvailable()) {
 
-            $value = $parameter->getDefaultValue();
+            $value = $this->reflection->getDefaultValue();
 
             return [$value, $defaults];
 
@@ -57,6 +73,6 @@ class ParameterResolver
         // null.
 
         // fail when no value has been resolved.
-        throw new ParameterValueCantBeResolvedException($parameter);
+        throw new ParameterValueCantBeResolvedException($this->reflection);
     }
 }

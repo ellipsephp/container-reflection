@@ -24,14 +24,20 @@ class Reflector
     }
 
     /**
-     * Return an array containing the reflected parameters of the given callable.
+     * Return an array of reflected parameters from the given callable.
      *
      * @param callable $callable
      * @return array
      */
     public function getReflectedParameters(callable $callable): array
     {
-        return $this->getReflectedCallable($callable)->getParameters();
+        $reflections = $this->getReflectedCallable($callable)->getParameters();
+
+        return array_map(function ($reflection) {
+
+            return new ReflectedParameter($reflection);
+
+        }, $reflections);
     }
 
     /**
@@ -42,35 +48,35 @@ class Reflector
      */
     private function getReflectedCallable(callable $callable): ReflectionFunctionAbstract
     {
-        // function () {}
+        // handle function () {}
         if ($callable instanceof Closure) {
 
             return new ReflectionFunction($callable);
 
         }
 
-        // [$instance, 'method'] or [SomeClass::class, 'method']
+        // handle 'somefunction'
+        if (is_string($callable) && strpos($callable, '::') === false) {
+
+            return new ReflectionFunction($callable);
+
+        }
+
+        // handle [$instance, 'method'] or [SomeClass::class, 'method']
         if (is_array($callable)) {
 
             return new ReflectionMethod($callable[0], $callable[1]);
 
         }
 
-        // new class () { public function __invoke () {} }
+        // handle new class () { public function __invoke () {} }
         if (is_object($callable)) {
 
             return new ReflectionMethod($callable, '__invoke');
 
         }
 
-        // 'SomeClass::method'
-        if (is_string($callable) && strpos($callable, '::') !== false) {
-
-            return new ReflectionMethod($callable);
-
-        }
-
-        // 'somefunction'
-        return new ReflectionFunction($callable);
+        // handle 'SomeClass::method'
+        return new ReflectionMethod($callable);
     }
 }

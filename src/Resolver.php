@@ -5,46 +5,17 @@ namespace Ellipse\Container;
 class Resolver
 {
     /**
-     * The parameter resolver.
+     * Return an array of values for the given array of reflected parameters.
      *
-     * @var \Ellipse\Container\ParameterResolver
-     */
-    private $resolver;
-
-    /**
-     * Return a Resolver.
-     *
-     * @return \Ellipse\Container\Resolver
-     */
-    public static function getInstance(): Resolver
-    {
-        $resolver = new ParameterResolver;
-
-        return new Resolver($resolver);
-    }
-
-    /**
-     * Set up a parameter list resolver with the given parameter resolver.
-     *
-     * @param \Ellipse\Container\ParameterResolver $resolver
-     */
-    public function __construct(ParameterResolver $resolver)
-    {
-        $this->resolver = $resolver;
-    }
-
-    /**
-     * Return an array of values for the given list of reflection parameters.
-     *
-     * @param \Ellipse\Container\ReflectionContainer    $container
      * @param array                                     $parameters
+     * @param \Ellipse\Container\ReflectionContainer    $container
      * @param array                                     $overrides
      * @param array                                     $defaults
      * @return array
      */
-    public function map(
-        ReflectionContainer $container,
+    public function getValues(
         array $parameters,
+        ReflectionContainer $container,
         array $overrides = [],
         array $defaults = []
     ): array {
@@ -52,12 +23,31 @@ class Resolver
 
         foreach ($parameters as $parameter) {
 
-            [$value, $defaults] = $this->resolver->resolve($container, $parameter, $overrides, $defaults);
+            [$value, $defaults] = $this->getValue($parameter, $container, $overrides, $defaults);
 
             $values[] = $value;
 
         }
 
         return $values;
+    }
+
+    /**
+    * Return an array containing the resolved values of the given reflected
+    * parameter and the new default values array.
+     *
+     * @param \Ellipse\Container\ReflectedParameter     $parameter
+     * @param \Ellipse\Container\ReflectionContainer    $container
+     * @param array                                     $overrides
+     * @param array                                     $defaults
+     * @return array
+     */
+    private function getValue(
+        ReflectedParameter $parameter,
+        ReflectionContainer $container,
+        array $overrides = [],
+        array $defaults = []
+    ): array {
+        return $parameter->getValue($container, $overrides, $defaults);
     }
 }

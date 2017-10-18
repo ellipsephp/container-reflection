@@ -5,6 +5,7 @@ use function Eloquent\Phony\Kahlan\onStatic;
 
 use Ellipse\Container\Reflector;
 use Ellipse\Container\ReflectedClass;
+use Ellipse\Container\ReflectedParameter;
 
 describe('ReflectedClass', function () {
 
@@ -28,7 +29,7 @@ describe('ReflectedClass', function () {
 
     describe('->getReflectedParameters()', function () {
 
-        it('should return the parameters of a function name', function () {
+        it('should return an array of reflected parameters from a function name', function () {
 
             function test (string $p1, $p2 = 'default') {};
 
@@ -36,14 +37,12 @@ describe('ReflectedClass', function () {
 
             expect($test)->toBeAn('array');
             expect($test)->toHaveLength(2);
-            expect($test[0])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[1])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[0]->getType())->toEqual('string');
-            expect($test[1]->getDefaultValue())->toEqual('default');
+            expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+            expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
 
         });
 
-        it('should return the parameters of an annonymous function', function () {
+        it('should return an array of reflected parameters from an annonymous function', function () {
 
             $callable = function (string $p1, $p2 = 'default') {};
 
@@ -51,14 +50,12 @@ describe('ReflectedClass', function () {
 
             expect($test)->toBeAn('array');
             expect($test)->toHaveLength(2);
-            expect($test[0])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[1])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[0]->getType())->toEqual('string');
-            expect($test[1]->getDefaultValue())->toEqual('default');
+            expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+            expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
 
         });
 
-        it('should return the parameters of an object method', function () {
+        it('should return an array of reflected parameters from an object method', function () {
 
             $object = mock(['method' => function (string $p1, $p2 = 'default') {}])->get();
 
@@ -68,14 +65,12 @@ describe('ReflectedClass', function () {
 
             expect($test)->toBeAn('array');
             expect($test)->toHaveLength(2);
-            expect($test[0])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[1])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[0]->getType())->toEqual('string');
-            expect($test[1]->getDefaultValue())->toEqual('default');
+            expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+            expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
 
         });
 
-        it('should return the parameters of a class static method', function () {
+        it('should return an array of reflected parameters from a class static method', function () {
 
             $object = onStatic(mock(['static method' => function (string $p1, $p2 = 'default') {}]));
 
@@ -85,14 +80,12 @@ describe('ReflectedClass', function () {
 
             expect($test)->toBeAn('array');
             expect($test)->toHaveLength(2);
-            expect($test[0])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[1])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[0]->getType())->toEqual('string');
-            expect($test[1]->getDefaultValue())->toEqual('default');
+            expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+            expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
 
         });
 
-        it('should return the parameters of a string representation of a class static method', function () {
+        it('should return an array of reflected parameters from a string representation of a class static method', function () {
 
             $object = onStatic(mock(['static method' => function (string $p1, $p2 = 'default') {}]));
 
@@ -102,14 +95,12 @@ describe('ReflectedClass', function () {
 
             expect($test)->toBeAn('array');
             expect($test)->toHaveLength(2);
-            expect($test[0])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[1])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[0]->getType())->toEqual('string');
-            expect($test[1]->getDefaultValue())->toEqual('default');
+            expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+            expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
 
         });
 
-        it('should return the parameters of an invokable object', function () {
+        it('should return an array of reflected parameters from an invokable object', function () {
 
             $callable = mock(['__invoke' => function (string $p1, $p2 = 'default') {}])->get();
 
@@ -117,10 +108,8 @@ describe('ReflectedClass', function () {
 
             expect($test)->toBeAn('array');
             expect($test)->toHaveLength(2);
-            expect($test[0])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[1])->toBeAnInstanceOf(ReflectionParameter::class);
-            expect($test[0]->getType())->toEqual('string');
-            expect($test[1]->getDefaultValue())->toEqual('default');
+            expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
+            expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
 
         });
 

@@ -9,6 +9,7 @@ use Ellipse\Container\ReflectionContainer;
 use Ellipse\Container\Reflector;
 use Ellipse\Container\Resolver;
 use Ellipse\Container\ReflectedClass;
+use Ellipse\Container\ReflectedParameter;
 use Ellipse\Container\Exceptions\ClassNotFoundException;
 use Ellipse\Container\Exceptions\ImplementationNotDefinedException;
 
@@ -28,7 +29,7 @@ describe('ReflectionContainer', function () {
 
     });
 
-    it('should implements container interface', function () {
+    it('should implement ContainerInterface', function () {
 
         expect($this->container)->toBeAnInstanceOf(ContainerInterface::class);
 
@@ -93,7 +94,7 @@ describe('ReflectionContainer', function () {
 
         context('when the id is not an interface or class name', function () {
 
-            it('should fail', function () {
+            it('should throw ClassNotFoundException', function () {
 
                 $test = function () { $this->container->make('id'); };
 
@@ -126,68 +127,59 @@ describe('ReflectionContainer', function () {
 
             beforeEach(function () {
 
-                $this->reflected = mock(ReflectedClass::class);
-
                 $this->decorated->has->with(StdClass::class)->returns(false);
+
+                $this->reflected = mock(ReflectedClass::class);
 
                 $this->reflector->getReflectedClass->with(StdClass::class)->returns($this->reflected);
 
             });
 
-            context('when the id is not the name of an instantiable class', function () {
-
-                beforeEach(function () {
-
-                    $this->reflected->isInstantiable->returns(false);
-
-                });
-
-                it('should throw ImplementationNotDefinedException', function () {
-
-                    $test = function () { $this->container->make(StdClass::class); };
-
-                    expect($test)->toThrow(new ImplementationNotDefinedException(StdClass::class));
-                    $this->reflected->isInstantiable->called();
-
-                });
-
-            });
-
             context('when the id is the name of an instantiable class', function () {
-
-                beforeEach(function () {
-
-                    $this->reflected->isInstantiable->returns(true);
-
-                });
 
                 it('should resolve the class constructor parameters and instantiate the class with those resolved values', function () {
 
+                    $this->reflected->isInstantiable->returns(true);
+
                     $parameters = [
-                        mock(ReflectionParameter::class)->get(),
-                        mock(ReflectionParameter::class)->get(),
-                        mock(ReflectionParameter::class)->get(),
+                        mock(ReflectedParameter::class)->get(),
+                        mock(ReflectedParameter::class)->get(),
+                        mock(ReflectedParameter::class)->get(),
                     ];
 
+                    $container = $this->container;
                     $overrides = ['Class' => new class () {}];
                     $defaults = ['d1', 'd2', 'd3'];
 
-                    $this->reflected->getParameters->returns($parameters);
+                    $this->reflected->getReflectedParameters->returns($parameters);
 
-                    $this->resolver->map->with(
-                        $this->container,
-                        $parameters,
-                        $overrides,
-                        $defaults
-                    )->returns(['v1', 'v2', 'v3']);
+                    $this->resolver->getValues->with($parameters, $container, $overrides, $defaults)
+                        ->returns(['v1', 'v2', 'v3']);
 
                     $test = $this->container->make(StdClass::class, $overrides, $defaults);
 
                     expect($test)->toBeAnInstanceOf(StdClass::class);
                     $this->reflector->getReflectedClass->called();
                     $this->reflected->isInstantiable->called();
-                    $this->reflected->getParameters->called();
-                    $this->resolver->map->called();
+                    $this->reflected->getReflectedParameters->called();
+                    $this->resolver->getValues->called();
+
+                });
+
+            });
+
+            context('when the id is not the name of an instantiable class', function () {
+
+                it('should throw ImplementationNotDefinedException', function () {
+
+                    $this->reflected->isInstantiable->returns(false);
+
+                    $test = function () { $this->container->make(StdClass::class); };
+
+                    $exception = new ImplementationNotDefinedException(StdClass::class);
+
+                    expect($test)->toThrow($exception);
+                    $this->reflected->isInstantiable->called();
 
                 });
 
@@ -201,34 +193,29 @@ describe('ReflectionContainer', function () {
 
         it('should resolve the callable parameters and call it with the resolved values', function () {
 
-            $instance = new class () {};
-
-            $callable = stub(function () {})->with('v1', 'v2', 'v3')->returns($instance);
+            $callable = stub()->with('v1', 'v2', 'v3')->returns('value');
 
             $parameters = [
-                mock(ReflectionParameter::class)->get(),
-                mock(ReflectionParameter::class)->get(),
-                mock(ReflectionParameter::class)->get(),
+                mock(ReflectedParameter::class)->get(),
+                mock(ReflectedParameter::class)->get(),
+                mock(ReflectedParameter::class)->get(),
             ];
 
+            $container = $this->container;
             $overrides = ['Class' => new class () {}];
             $defaults = ['d1', 'd2', 'd3'];
 
             $this->reflector->getReflectedParameters->with($callable)
                 ->returns($parameters);
 
-            $this->resolver->map->with(
-                $this->container,
-                $parameters,
-                $overrides,
-                $defaults
-            )->returns(['v1', 'v2', 'v3']);
+            $this->resolver->getValues->with($parameters, $container, $overrides, $defaults)
+                ->returns(['v1', 'v2', 'v3']);
 
             $test = $this->container->call($callable, $overrides, $defaults);
 
-            expect($test)->toEqual($instance);
+            expect($test)->toEqual('value');
             $this->reflector->getReflectedParameters->called();
-            $this->resolver->map->called();
+            $this->resolver->getValues->called();
             $callable->called();
 
         });

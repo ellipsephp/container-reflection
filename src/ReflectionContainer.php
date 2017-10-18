@@ -36,10 +36,10 @@ class ReflectionContainer implements ContainerInterface
      * @param \Psr\Container\ContainerInterface $container
      * @return \Ellipse\Container\ReflectionContainer
      */
-    public static function decorate(ContainerInterface $container)
+    public static function decorate(ContainerInterface $container): ReflectionContainer
     {
         $reflector = new Reflector;
-        $resolver = Resolver::getInstance();
+        $resolver = new Resolver;
 
         return new ReflectionContainer($container, $reflector, $resolver);
     }
@@ -63,7 +63,7 @@ class ReflectionContainer implements ContainerInterface
     }
 
     /**
-     * @{inheritdoc}
+     * @inheritdoc
      */
     public function get($id)
     {
@@ -71,7 +71,7 @@ class ReflectionContainer implements ContainerInterface
     }
 
     /**
-     * @{inheritdoc}
+     * @inheritdoc
      */
     public function has($id)
     {
@@ -79,8 +79,8 @@ class ReflectionContainer implements ContainerInterface
     }
 
     /**
-     * Make an instance of the given class with the given overrides and default
-     * values.
+     * Make an instance of the class with the given name using the given
+     * overrides and default values.
      *
      * @param string $id
      * @param array  $overrides
@@ -91,54 +91,54 @@ class ReflectionContainer implements ContainerInterface
      */
     public function make(string $id, array $overrides = [], array $defaults = [])
     {
-        // ensure the id is an interface or class name.
+        // ensure the id is an existing interface or class.
         if (! interface_exists($id) && ! class_exists($id)) {
 
             throw new ClassNotFoundException($id);
 
         }
 
-        // if the container contains the service, return the .
+        // get the instance provided by the container when it contains the class
+        // name.
         if ($this->has($id)) return $this->get($id);
 
         // get a reflection of the class.
         $reflected = $this->reflector->getReflectedClass($id);
 
-        // fail when the alias is not instantiable.
+        // fail if the class is not instantiable (interface of abstract class).
         if (! $reflected->isInstantiable()) {
 
             throw new ImplementationNotDefinedException($id);
 
         }
 
-        // get the class constructor parameters.
-        $parameters = $reflected->getParameters();
+        // get the reflected parameters of the class constructor.
+        $parameters = $reflected->getReflectedParameters();
 
-        // try to resolve those parameters.
-        $values = $this->resolver->map($this, $parameters, $overrides, $defaults);
+        // try to resolve the values of those parameters.
+        $values = $this->resolver->getValues($parameters, $this, $overrides, $defaults);
 
-        // return an instance of the class.
+        // instantiate the class with those values and return it.
         return new $id(...$values);
     }
 
     /**
-     * Execute a callable with the given overrides as parameters. Retrieve the
-     * remaining parameters from the container.
+     * Execute the given callable using the given overrides and default values.
      *
      * @param callable  $callable
      * @param array     $overrides
-     * @param array     $values
+     * @param array     $defaults
      * @return mixed
      */
-    public function call(callable $callable, array $overrides = [], array $values = [])
+    public function call(callable $callable, array $overrides = [], array $defaults = [])
     {
-        // get a reflection of the class.
+        // get the reflected parameters of the callable.
         $parameters = $this->reflector->getReflectedParameters($callable);
 
-        // try to resolve those parameters.
-        $values = $this->resolver->map($this, $parameters, $overrides, $values);
+        // try to resolve the values of those parameters.
+        $values = $this->resolver->getValues($parameters, $this, $overrides, $defaults);
 
-        // call the callable with those values.
+        // call the callable with those values and return it.
         return $callable(...$values);
     }
 }

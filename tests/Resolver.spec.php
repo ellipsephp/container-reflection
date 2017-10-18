@@ -4,60 +4,45 @@ use function Eloquent\Phony\Kahlan\mock;
 
 use Ellipse\Container\ReflectionContainer;
 use Ellipse\Container\Resolver;
-use Ellipse\Container\ParameterResolver;
+use Ellipse\Container\ReflectedParameter;
 
 describe('Resolver', function () {
 
     beforeEach(function () {
 
-        $this->parameter = mock(ParameterResolver::class);
-
-        $this->resolver = new Resolver($this->parameter->get());
+        $this->resolver = new Resolver;
 
     });
 
-    describe('::getInstance()', function () {
+    describe('->getValues()', function () {
 
-        it('should return a Resolver', function () {
-
-            $test = Resolver::getInstance();
-
-            expect($test)->toBeAnInstanceOf(Resolver::class);
-
-        });
-
-    });
-
-    describe('->map()', function () {
-
-        it('should call the ->resolve() method of the parameter resolver for each parameter in the given array', function () {
+        it('should sequentially call the ->getValue() method of the given array of reflected parameters', function () {
 
             $container = mock(ReflectionContainer::class)->get();
-
-            $p1 = mock(ReflectionParameter::class)->get();
-            $p2 = mock(ReflectionParameter::class)->get();
-            $p3 = mock(ReflectionParameter::class)->get();
-
             $overrides = ['Class' => new class () {}];
+            $defaults = ['v1', 'v2', 'v3'];
 
-            $this->parameter->resolve->with($container, $p1, $overrides, ['v1', 'v2', 'v3'])
+            $p1 = mock(ReflectedParameter::class);
+            $p2 = mock(ReflectedParameter::class);
+            $p3 = mock(ReflectedParameter::class);
+
+            $p1->getValue->with($container, $overrides, ['v1', 'v2', 'v3'])
                 ->returns(['v1', ['v2', 'v3']]);
 
-            $this->parameter->resolve->with($container, $p2, $overrides, ['v2', 'v3'])
+            $p2->getValue->with($container, $overrides, ['v2', 'v3'])
                 ->returns(['v2', ['v3']]);
 
-            $this->parameter->resolve->with($container, $p3, $overrides, ['v3'])
+            $p3->getValue->with($container, $overrides, ['v3'])
                 ->returns(['v3', []]);
 
-            $test = $this->resolver->map(
-                $container,
-                [$p1, $p2, $p3],
-                $overrides,
-                ['v1', 'v2', 'v3']
-            );
+            $parameters = [$p1->get(), $p2->get(), $p3->get()];
+
+            $test = $this->resolver->getValues($parameters, $container, $overrides, $defaults);
 
             expect($test)->toEqual(['v1', 'v2', 'v3']);
-            $this->parameter->resolve->called();
+            $p1->getValue->called();
+            $p2->getValue->called();
+            $p3->getValue->called();
 
         });
 
