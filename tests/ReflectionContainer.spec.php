@@ -57,7 +57,7 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->get('id');
 
-            expect($test)->toEqual($instance);
+            expect($test)->toBe($instance);
             $this->decorated->get->called();
 
         });
@@ -115,7 +115,7 @@ describe('ReflectionContainer', function () {
 
                 $test = $this->container->make(stdClass::class);
 
-                expect($test)->toEqual($instance);
+                expect($test)->toBe($instance);
                 $this->decorated->has->called();
                 $this->decorated->get->called();
 
@@ -193,7 +193,9 @@ describe('ReflectionContainer', function () {
 
         it('should resolve the callable parameters and call it with the resolved values', function () {
 
-            $callable = stub()->with('v1', 'v2', 'v3')->returns('value');
+            $instance = new class () {};
+
+            $callable = stub()->with('v1', 'v2', 'v3')->returns($instance);
 
             $parameters = [
                 mock(ReflectedParameter::class)->get(),
@@ -213,7 +215,7 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->call($callable, $overrides, $defaults);
 
-            expect($test)->toEqual('value');
+            expect($test)->toBe($instance);
             $this->reflector->getReflectedParameters->called();
             $this->resolver->getValues->called();
             $callable->called();
