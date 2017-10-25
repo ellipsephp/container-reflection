@@ -40,9 +40,6 @@ describe('Resolver', function () {
             $test = $this->resolver->getValues($parameters, $container, $overrides, $defaults);
 
             expect($test)->toEqual(['v1', 'v2', 'v3']);
-            $p1->getValue->called();
-            $p2->getValue->called();
-            $p3->getValue->called();
 
         });
 

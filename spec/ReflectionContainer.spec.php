@@ -58,7 +58,6 @@ describe('ReflectionContainer', function () {
             $test = $this->container->get('id');
 
             expect($test)->toBe($instance);
-            $this->decorated->get->called();
 
         });
 
@@ -72,8 +71,7 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->has('id');
 
-            expect($test)->toBe(true);
-            $this->decorated->has->called();
+            expect($test)->toBeTruthy();
 
         });
 
@@ -83,8 +81,7 @@ describe('ReflectionContainer', function () {
 
             $test = $this->container->has('id');
 
-            expect($test)->toBe(false);
-            $this->decorated->has->called();
+            expect($test)->toBeFalsy();
 
         });
 
@@ -116,8 +113,6 @@ describe('ReflectionContainer', function () {
                 $test = $this->container->make(stdClass::class);
 
                 expect($test)->toBe($instance);
-                $this->decorated->has->called();
-                $this->decorated->get->called();
 
             });
 
@@ -141,15 +136,15 @@ describe('ReflectionContainer', function () {
 
                     $this->reflected->isInstantiable->returns(true);
 
+                    $container = $this->container;
+                    $overrides = ['Class' => new class () {}];
+                    $defaults = ['d1', 'd2', 'd3'];
+
                     $parameters = [
                         mock(ReflectedParameter::class)->get(),
                         mock(ReflectedParameter::class)->get(),
                         mock(ReflectedParameter::class)->get(),
                     ];
-
-                    $container = $this->container;
-                    $overrides = ['Class' => new class () {}];
-                    $defaults = ['d1', 'd2', 'd3'];
 
                     $this->reflected->getReflectedParameters->returns($parameters);
 
@@ -159,10 +154,6 @@ describe('ReflectionContainer', function () {
                     $test = $this->container->make(StdClass::class, $overrides, $defaults);
 
                     expect($test)->toBeAnInstanceOf(StdClass::class);
-                    $this->reflector->getReflectedClass->called();
-                    $this->reflected->isInstantiable->called();
-                    $this->reflected->getReflectedParameters->called();
-                    $this->resolver->getValues->called();
 
                 });
 
@@ -179,7 +170,6 @@ describe('ReflectionContainer', function () {
                     $exception = new ImplementationNotDefinedException(StdClass::class);
 
                     expect($test)->toThrow($exception);
-                    $this->reflected->isInstantiable->called();
 
                 });
 
@@ -195,7 +185,9 @@ describe('ReflectionContainer', function () {
 
             $instance = new class () {};
 
-            $callable = stub()->with('v1', 'v2', 'v3')->returns($instance);
+            $container = $this->container;
+            $overrides = ['Class' => new class () {}];
+            $defaults = ['d1', 'd2', 'd3'];
 
             $parameters = [
                 mock(ReflectedParameter::class)->get(),
@@ -203,9 +195,7 @@ describe('ReflectionContainer', function () {
                 mock(ReflectedParameter::class)->get(),
             ];
 
-            $container = $this->container;
-            $overrides = ['Class' => new class () {}];
-            $defaults = ['d1', 'd2', 'd3'];
+            $callable = stub()->with('v1', 'v2', 'v3')->returns($instance);
 
             $this->reflector->getReflectedParameters->with($callable)
                 ->returns($parameters);
@@ -216,9 +206,6 @@ describe('ReflectionContainer', function () {
             $test = $this->container->call($callable, $overrides, $defaults);
 
             expect($test)->toBe($instance);
-            $this->reflector->getReflectedParameters->called();
-            $this->resolver->getValues->called();
-            $callable->called();
 
         });
 

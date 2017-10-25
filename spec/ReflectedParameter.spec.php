@@ -41,6 +41,7 @@ describe('ReflectedParameter', function () {
                 it('should return the value associated to it', function () {
 
                     $instance = new class () {};
+
                     $container = $this->container->get();
                     $overrides = ['SomeClass' => $instance];
                     $defaults = ['d1', 'd2'];
@@ -48,8 +49,6 @@ describe('ReflectedParameter', function () {
                     $test = $this->parameter->getValue($container, $overrides, $defaults);
 
                     expect($test)->toEqual([$instance, $defaults]);
-                    $this->reflection->getClass->called();
-                    $this->class->getName->called();
 
                 });
 
@@ -60,8 +59,9 @@ describe('ReflectedParameter', function () {
                 it('should make the parameter class name using the container', function () {
 
                     $instance = new class () {};
+
                     $container = $this->container->get();
-                    $overrides = ['SomeOtherClass' => $instance];
+                    $overrides = ['SomeOtherClass' => new class () {}];
                     $defaults = ['d1', 'd2'];
 
                     $this->container->make->with('SomeClass', $overrides)->returns($instance);
@@ -69,9 +69,6 @@ describe('ReflectedParameter', function () {
                     $test = $this->parameter->getValue($container, $overrides, $defaults);
 
                     expect($test)->toEqual([$instance, ['d1', 'd2']]);
-                    $this->reflection->getClass->called();
-                    $this->class->getName->called();
-                    $this->container->make->called();
 
                 });
 
@@ -117,8 +114,6 @@ describe('ReflectedParameter', function () {
                         $test = $this->parameter->getValue($container);
 
                         expect($test)->toEqual(['value', []]);
-                        $this->reflection->isDefaultValueAvailable->called();
-                        $this->reflection->getDefaultValue->called();
 
                     });
 
@@ -132,8 +127,6 @@ describe('ReflectedParameter', function () {
                         $test = $this->parameter->getValue($container);
 
                         expect($test)->toEqual([null, []]);
-                        $this->reflection->isDefaultValueAvailable->called();
-                        $this->reflection->getDefaultValue->called();
 
                     });
 
@@ -156,7 +149,6 @@ describe('ReflectedParameter', function () {
                         $exception = new ParameterValueCantBeResolvedException($this->reflection->get());
 
                         expect($test)->toThrow($exception);
-                        $this->reflection->isDefaultValueAvailable->called();
 
                     });
 

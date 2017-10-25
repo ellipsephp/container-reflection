@@ -26,8 +26,7 @@ describe('ReflectedClass', function () {
 
                 $test = $this->class->isInstantiable();
 
-                expect($test)->toBe(false);
-                $this->reflection->isInterface->called();
+                expect($test)->toBeFalsy();
 
             });
 
@@ -42,8 +41,7 @@ describe('ReflectedClass', function () {
 
                 $test = $this->class->isInstantiable();
 
-                expect($test)->toBe(false);
-                $this->reflection->isAbstract->called();
+                expect($test)->toBeFalsy();
 
             });
 
@@ -58,9 +56,7 @@ describe('ReflectedClass', function () {
 
                 $test = $this->class->isInstantiable();
 
-                expect($test)->toBe(true);
-                $this->reflection->isInterface->called();
-                $this->reflection->isAbstract->called();
+                expect($test)->toBeTruthy();
 
             });
 
@@ -79,7 +75,6 @@ describe('ReflectedClass', function () {
                 $test = $this->class->getReflectedParameters();
 
                 expect($test)->toEqual([]);
-                $this->reflection->getConstructor->called();
 
             });
 
@@ -89,15 +84,13 @@ describe('ReflectedClass', function () {
 
             it('should return an array of reflected parameters from the class constructor', function () {
 
-                $parameters = [
-                    mock(ReflectionParameter::class)->get(),
-                    mock(ReflectionParameter::class)->get(),
-                    mock(ReflectionParameter::class)->get(),
-                ];
-
                 $constructor = mock(ReflectionMethod::class);
 
-                $constructor->getParameters->returns($parameters);
+                $constructor->getParameters->returns([
+                    mock(ReflectionParameter::class)->get(),
+                    mock(ReflectionParameter::class)->get(),
+                    mock(ReflectionParameter::class)->get(),
+                ]);
 
                 $this->reflection->getConstructor->returns($constructor);
 
@@ -108,8 +101,6 @@ describe('ReflectedClass', function () {
                 expect($test[0])->toBeAnInstanceOf(ReflectedParameter::class);
                 expect($test[1])->toBeAnInstanceOf(ReflectedParameter::class);
                 expect($test[2])->toBeAnInstanceOf(ReflectedParameter::class);
-                $this->reflection->getConstructor->called();
-                $constructor->getParameters->called();
 
             });
 
