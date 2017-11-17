@@ -8,7 +8,7 @@ It allows to add extra features like **auto-wiring** and **callable dependency i
 
 **Installation** `composer require ellipse/container-reflection`
 
-**Run tests** `./vendor/bin/kahlan --spec=tests`
+**Run tests** `./vendor/bin/kahlan`
 
 * [Decorating a container](#decorating-a-container)
 * [Auto-wiring](#auto-wiring)
