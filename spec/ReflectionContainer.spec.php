@@ -1,31 +1,27 @@
 <?php
 
-use function Eloquent\Phony\Kahlan\mock;
 use function Eloquent\Phony\Kahlan\stub;
+use function Eloquent\Phony\Kahlan\mock;
 
 use Psr\Container\ContainerInterface;
 
 use Ellipse\Container\ReflectionContainer;
-use Ellipse\Container\Reflector;
-use Ellipse\Container\Resolver;
-use Ellipse\Container\ReflectedClass;
-use Ellipse\Container\ReflectedParameter;
-use Ellipse\Container\Exceptions\ClassNotFoundException;
-use Ellipse\Container\Exceptions\ImplementationNotDefinedException;
+use Ellipse\Container\ResolvableClassFactory;
+use Ellipse\Container\ResolvableCallableFactory;
+use Ellipse\Container\ResolvableValue;
 
 describe('ReflectionContainer', function () {
 
     beforeEach(function () {
 
-        $this->decorated = mock(ContainerInterface::class);
-        $this->reflector = mock(Reflector::class);
-        $this->resolver = mock(Resolver::class);
+        $this->delegate = mock(ContainerInterface::class);
+        $this->class = mock(ResolvableClassFactory::class);
+        $this->callable = mock(ResolvableCallableFactory::class);
 
-        $this->container = new ReflectionContainer(
-            $this->decorated->get(),
-            $this->reflector->get(),
-            $this->resolver->get()
-        );
+        allow(ResolvableClassFactory::class)->toBe($this->class->get());
+        allow(ResolvableCallableFactory::class)->toBe($this->callable->get());
+
+        $this->container = new ReflectionContainer($this->delegate->get());
 
     });
 
@@ -35,25 +31,13 @@ describe('ReflectionContainer', function () {
 
     });
 
-    describe('::decorate()', function () {
-
-        it('should return a ReflectionContainer', function () {
-
-            $test = ReflectionContainer::decorate($this->decorated->get());
-
-            expect($test)->toBeAnInstanceOf(ReflectionContainer::class);
-
-        });
-
-    });
-
     describe('->get()', function () {
 
         it('should proxy the underlying container get method', function () {
 
             $instance = new class () {};
 
-            $this->decorated->get->with('id')->returns($instance);
+            $this->delegate->get->with('id')->returns($instance);
 
             $test = $this->container->get('id');
 
@@ -65,23 +49,31 @@ describe('ReflectionContainer', function () {
 
     describe('->has()', function () {
 
-        it('should call the underlying container has method and return true when it succeeded', function () {
+        context('when the delegate ->has() method returns true', function () {
 
-            $this->decorated->has->with('id')->returns(true);
+            it('should return true', function () {
 
-            $test = $this->container->has('id');
+                $this->delegate->has->with('id')->returns(true);
 
-            expect($test)->toBeTruthy();
+                $test = $this->container->has('id');
+
+                expect($test)->toBeTruthy();
+
+            });
 
         });
 
-        it('should call the underlying container has method and return false when it failed', function () {
+        context('when the delegate ->has() method returns false', function () {
 
-            $this->decorated->has->with('id')->returns(false);
+            it('should return false', function () {
 
-            $test = $this->container->has('id');
+                $this->delegate->has->with('id')->returns(false);
 
-            expect($test)->toBeFalsy();
+                $test = $this->container->has('id');
+
+                expect($test)->toBeFalsy();
+
+            });
 
         });
 
@@ -89,28 +81,16 @@ describe('ReflectionContainer', function () {
 
     describe('->make()', function () {
 
-        context('when the id is not an interface or class name', function () {
+        context('when the given class name is contained in the delegate', function () {
 
-            it('should throw ClassNotFoundException', function () {
-
-                $test = function () { $this->container->make('id'); };
-
-                expect($test)->toThrow(new ClassNotFoundException('id'));
-
-            });
-
-        });
-
-        context('when the container contains a definition for this id', function () {
-
-            it('should return the instance provided by the container', function () {
+            it('should proxy the delegate ->get() method', function () {
 
                 $instance = new class () {};
 
-                $this->decorated->has->with(stdClass::class)->returns(true);
-                $this->decorated->get->with(stdClass::class)->returns($instance);
+                $this->delegate->has->with('class')->returns(true);
+                $this->delegate->get->with('class')->returns($instance);
 
-                $test = $this->container->make(stdClass::class);
+                $test = $this->container->make('class');
 
                 expect($test)->toBe($instance);
 
@@ -118,60 +98,26 @@ describe('ReflectionContainer', function () {
 
         });
 
-        context('when the container does not contain a definition for this id', function () {
+        context('when the given class name is not contained in the delegate', function () {
 
-            beforeEach(function () {
+            it('should use the resolvable class factory to produce a resolvable value and proxy its ->value() method', function () {
 
-                $this->decorated->has->with(StdClass::class)->returns(false);
+                $this->delegate->has->with('class')->returns(false);
 
-                $this->reflected = mock(ReflectedClass::class);
+                $overrides = ['overridden' => new class () {}];
+                $placeholders = ['p1', 'p2'];
 
-                $this->reflector->getReflectedClass->with(StdClass::class)->returns($this->reflected);
+                $instance = new class () {};
 
-            });
+                $resolvable = mock(ResolvableValue::class);
 
-            context('when the id is the name of an instantiable class', function () {
+                $this->class->__invoke->with('class')->returns($resolvable);
 
-                it('should resolve the class constructor parameters and instantiate the class with those resolved values', function () {
+                $resolvable->value->with($this->container, $overrides, $placeholders)->returns($instance);
 
-                    $this->reflected->isInstantiable->returns(true);
+                $test = $this->container->make('class', $overrides, $placeholders);
 
-                    $container = $this->container;
-                    $overrides = ['Class' => new class () {}];
-                    $defaults = ['d1', 'd2', 'd3'];
-
-                    $parameters = [
-                        mock(ReflectedParameter::class)->get(),
-                        mock(ReflectedParameter::class)->get(),
-                        mock(ReflectedParameter::class)->get(),
-                    ];
-
-                    $this->reflected->getReflectedParameters->returns($parameters);
-
-                    $this->resolver->getValues->with($parameters, $container, $overrides, $defaults)
-                        ->returns(['v1', 'v2', 'v3']);
-
-                    $test = $this->container->make(StdClass::class, $overrides, $defaults);
-
-                    expect($test)->toBeAnInstanceOf(StdClass::class);
-
-                });
-
-            });
-
-            context('when the id is not the name of an instantiable class', function () {
-
-                it('should throw ImplementationNotDefinedException', function () {
-
-                    $this->reflected->isInstantiable->returns(false);
-
-                    $test = function () { $this->container->make(StdClass::class); };
-
-                    $exception = new ImplementationNotDefinedException(StdClass::class);
-
-                    expect($test)->toThrow($exception);
-
-                });
+                expect($test)->toBe($instance);
 
             });
 
@@ -181,31 +127,22 @@ describe('ReflectionContainer', function () {
 
     describe('->call()', function () {
 
-        it('should resolve the callable parameters and call it with the resolved values', function () {
+        it('should use the resolvable callable factory to produce a resolvable value and proxy its->value() method', function () {
 
-            $instance = new class () {};
+            $overrides = ['overridden' => new class () {}];
+            $placeholders = ['p1', 'p2'];
 
-            $container = $this->container;
-            $overrides = ['Class' => new class () {}];
-            $defaults = ['d1', 'd2', 'd3'];
+            $callable = stub();
 
-            $parameters = [
-                mock(ReflectedParameter::class)->get(),
-                mock(ReflectedParameter::class)->get(),
-                mock(ReflectedParameter::class)->get(),
-            ];
+            $resolvable = mock(ResolvableValue::class);
 
-            $callable = stub()->with('v1', 'v2', 'v3')->returns($instance);
+            $this->callable->__invoke->with($callable)->returns($resolvable);
 
-            $this->reflector->getReflectedParameters->with($callable)
-                ->returns($parameters);
+            $resolvable->value->with($this->container, $overrides, $placeholders)->returns('value');
 
-            $this->resolver->getValues->with($parameters, $container, $overrides, $defaults)
-                ->returns(['v1', 'v2', 'v3']);
+            $test = $this->container->call($callable, $overrides, $placeholders);
 
-            $test = $this->container->call($callable, $overrides, $defaults);
-
-            expect($test)->toBe($instance);
+            expect($test)->toEqual('value');
 
         });
 
