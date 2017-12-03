@@ -8,6 +8,9 @@ use Ellipse\Container\Executions\ExecutionWithTypeHint;
 use Ellipse\Container\Executions\ExecutionWithPlaceholder;
 use Ellipse\Container\Executions\ExecutionWithDefaultValue;
 use Ellipse\Container\Executions\FaillingExecution;
+use Ellipse\Container\Executions\TypeHinted\ExecutionWithOverriddenTypeHint;
+use Ellipse\Container\Executions\TypeHinted\ExecutionWithContainedTypeHint;
+use Ellipse\Container\Executions\TypeHinted\ExecutionWithClassTypeHint;
 
 class ResolvedValueFactory
 {
