@@ -22,14 +22,10 @@ class ResolvedValueFactory
             new ExecutionWithOverriddenTypeHint(
                 $this,
                 $overrides,
-                new ExecutionWithContainedTypeHint(
+                new ExecutionWithClassTypeHint(
                     $this,
                     $container,
-                    new ExecutionWithClassTypeHint(
-                        $this,
-                        $container,
-                        $overrides
-                    )
+                    $overrides
                 )
             ),
             new ExecutionWithPlaceholder(
