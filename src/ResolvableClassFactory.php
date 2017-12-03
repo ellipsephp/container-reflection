@@ -36,7 +36,7 @@ class ResolvableClassFactory
 
         $constructor = $reflection->getConstructor();
 
-        $factory = [$reflection, 'newInstanceArgs'];
+        $factory = [$reflection, 'newInstance'];
 
         $parameters = is_null($constructor) ? [] : $constructor->getParameters();
 

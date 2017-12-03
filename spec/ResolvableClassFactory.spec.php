@@ -26,7 +26,7 @@ describe('ResolvableClassFactory', function () {
 
             $this->delegate->__invoke->returns($this->reflection);
 
-            $this->class = [$this->reflection->get(), 'newInstanceArgs'];
+            $this->class = [$this->reflection->get(), 'newInstance'];
 
         });
 
@@ -46,7 +46,9 @@ describe('ResolvableClassFactory', function () {
 
                 $test = ($this->factory)('class');
 
-                expect($test)->toEqual(new ResolvableValue($this->class, $parameters));
+                $resolvable = new ResolvableValue($this->class, $parameters);
+
+                expect($test)->toEqual($resolvable);
 
             });
 
@@ -60,7 +62,9 @@ describe('ResolvableClassFactory', function () {
 
                 $test = ($this->factory)('class');
 
-                expect($test)->toEqual(new ResolvableValue($this->class, []));
+                $resolvable = new ResolvableValue($this->class, []);
+
+                expect($test)->toEqual($resolvable);
 
             });
 
