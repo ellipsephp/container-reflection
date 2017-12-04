@@ -13,7 +13,7 @@ describe('ExecutionWithTypeHint', function () {
 
     beforeEach(function () {
 
-        $this->overridden = mock(StdClass::class)->get();
+        $this->overridden = new class () {};
 
         $this->factory = mock(ResolvedValueFactory::class);
         $this->container = mock(ReflectionContainer::class);
@@ -86,7 +86,7 @@ describe('ExecutionWithTypeHint', function () {
 
                 it('should proxy the factory with the instance produced by the container ->make() method', function () {
 
-                    $instance = mock(StdClass::class)->get();
+                    $instance = new class () {};
 
                     $this->class->getName->returns('class');
 

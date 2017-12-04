@@ -17,7 +17,7 @@ describe('ResolvedValueFactory', function () {
         allow(ExecutionWithTypeHint::class)->toBe($this->delegate->get());
 
         $this->container = mock(ReflectionContainer::class);
-        $this->overrides = [StdClass::class => mock(StdClass::class)->get()];
+        $this->overrides = ['overridden' => new class () {}];
 
         $this->factory = new ResolvedValueFactory($this->container->get(), $this->overrides);
 

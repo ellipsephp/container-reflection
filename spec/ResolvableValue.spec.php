@@ -26,7 +26,7 @@ describe('ResolvableValue', function () {
         it('should use a new ResolvedValueFactory to execute the factory', function () {
 
             $container = mock(ReflectionContainer::class)->get();
-            $overrides = ['TestClass' => mock(StdClass::class)->get()];
+            $overrides = ['TestClass' => new class () {}];
             $placeholders = ['p1', 'p2'];
 
             $factory = mock(ResolvedValueFactory::class);
