@@ -23,6 +23,9 @@
             "email": "pierre.mallinjoud@gmail.com"
         }
     ],
+    "provide": {
+        "psr/container-implementation": "^1.0"
+    },
     "require": {
         "php": ">=7.1",
         "psr/container": "^1.0"
