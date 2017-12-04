@@ -24,15 +24,17 @@ First of all, nothing to worry about the `->get()` and `->has()` methods of the 
 ```php
 <?php
 
-use Some\Container;
+use Some\Psr11Container;
+
 use Ellipse\Container\ReflectionContainer;
+
 use App\SomeInterface;
 use App\SomeImplementation;
 
 // Get a new instance of some Psr-11 container.
-$container = new Container();
+$container = new Psr11Container();
 
-// Add some definitions. Depends on which Psr-11 container you are using.
+// Add some definitions. Method name depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     return new SomeImplementation;
@@ -40,7 +42,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = ReflectionContainer::decorate($container);
+$decorated = new ReflectionContainer($container);
 
 // The get and has methods of the decorated container are proxied.
 $decorated->has(SomeInterface::class); // returns true.
@@ -51,11 +53,9 @@ But now the container has two new useful method, the `->make(string $class)` met
 
 ## Auto-wiring
 
-The `->make(string $class)` method of the `ReflectionContainer` class allows to construct instances of the given class by using auto-wiring. It first checks if the container contains the given class name, in which case it just returns the instance provided by the container. Otherwise it constructs an instance of the class by recursively calling the `->make()` method on all its type hinted constructor parameters. This way it is no longer needed to define the whole tree of dependencies required to construct an instance of a class, yet it still relies on the instances provided by the container when special construction logic is needed.
+The `->make(string $class)` method of the `ReflectionContainer` class allows to build instances of the given class by using auto-wiring. It first checks if the container contains the given class name, in which case it just returns the instance provided by the container. Otherwise it build an instance of the class by recursively calling the `->make()` method on all its type hinted constructor parameters. This way it is no longer needed to define the whole tree of dependencies required to build an instance of a class, yet it still relies on the instances provided by the container when special construction logic is needed.
 
-When a parameter is type hinted as `Psr\Container\ContainerInterface`, the decorated container will be injected.
-
-When the given class does not exists, the `ReflectionContainer` instance will throw a `Ellipse\Container\Exceptions\ClassDoesNotExistException`.
+When it fails (for some reason a constructor parameter value can't be inferred), the thrown exception will have a clever error message, recursively appending all the error messages until the first error is found.
 
 Please note a new instance of the class is created on every `->make()` call. If a singleton is needed, it has to be defined in the container.
 
@@ -90,16 +90,29 @@ class SomeOtherClass
 ```php
 <?php
 
-use Some\Container;
+namespace App;
+
+class YetSomeOtherClass
+{
+    // ...
+}
+```
+
+```php
+<?php
+
+use Some\Psr11Container;
+
 use Ellipse\Container\ReflectionContainer;
+
 use App\SomeService;
 use App\SomeInterface;
 use App\SomeImplementation;
 
 // Get a new instance of some Psr-11 container.
-$container = new Container();
+$container = new Psr11Container();
 
-// Add some definitions. Depends on which Psr-11 container you are using.
+// Add some definitions. Method name depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     // Special construction logic ...
@@ -111,20 +124,22 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = ReflectionContainer::decorate($container);
+$decorated = new ReflectionContainer($container);
 
 // The container does not contains SomeService.
 $decorated->has(SomeService::class); // returns false.
 
-// Yet an instance of SomeService can be constructed.
+// Yet an instance of SomeService can be built.
 // The SomeImplementation instance provided by the container gets injected.
 // SomeOtherClass and YetSomeOtherClass gets constructed by recursively using ->make().
-$decorated->make(SomeService::class);
+$instance = $decorated->make(SomeService::class);
 ```
 
 ## Callable dependency injection
 
-The `->call(callable $callable)` method of the `ReflectionContainer` class allows to execute the given callable by using the `->make()` method for injecting its type hinted parameters. Any callable notation is supported.
+The `->call(callable $callable)` method of the `ReflectionContainer` class allows to execute the given callable by using the `->make()` method for injecting its type hinted parameters. Any known callable notation is supported.
+
+When it fails (for some reason one of the callable parameter value can't be inferred), the thrown exception will have a clever error message, recursively appending all the error messages until the first error is found.
 
 ```php
 <?php
@@ -143,16 +158,29 @@ class SomeClass
 ```php
 <?php
 
-use Some\Container;
+namespace App;
+
+class SomeOtherClass
+{
+    // ...
+}
+```
+
+```php
+<?php
+
+use Some\Psr11Container;
+
 use Ellipse\Container\ReflectionContainer;
+
 use App\SomeInterface;
 use App\SomeImplementation;
 use App\SomeClass;
 
 // Get a new instance of some Psr-11 container.
-$container = new Container();
+$container = new Psr11Container();
 
-// Add some definitions. Depends on which Psr-11 container you are using.
+// Add some definitions. Method name depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
     // Special construction logic ...
@@ -164,7 +192,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = ReflectionContainer::decorate($container);
+$decorated = new ReflectionContainer($container);
 
 // Get some callable.
 $some_callable = function (SomeInterface $a, SomeClass $b) {
@@ -186,9 +214,9 @@ Both `->make()` and `->call()` methods can take two arrays as optional parameter
 
 The first one is a list of class name => instance pairs. It allows to inject a particular instance of a class at runtime. For example it can be useful for injecting the current instance of a request processed by a list of middleware.
 
-The second one just contains any values which will be injected when a parameter has no class type hint. They are injected in the order they are listed and they are **not** propagated to the `->make()` calls used to construct type hinted parameters. A typical use case would be to inject the attributes extracted from an url pattern to a callable action.
+The second one just contains any values which will be injected when a parameter has no class type hint. They are injected in the order they are listed and they are **not** propagated to the `->make()` calls used to build type hinted parameters. A typical use case would be to inject the attributes extracted from an url pattern to an action/request handler.
 
-When no value can be resolved for one parameter, its default value will be used. If no default value is specified, a `Ellipse\Container\Exceptions\ParameterValueCantBeResolvedException` is thrown.
+When no value can be resolved for one parameter, its default value will be used if any.
 
 ```php
 <?php
@@ -196,7 +224,9 @@ When no value can be resolved for one parameter, its default value will be used.
 use Psr\Http\Message\ServerRequestInterface;
 
 use Some\Container;
+
 use Ellipse\Container\ReflectionContainer;
+
 use App\SomeInterface;
 use App\SomeImplementation;
 
@@ -206,7 +236,7 @@ $container = new Container();
 // Add some definitions. Depends on which Psr-11 container you are using.
 $container->set(SomeInterface::class, function () {
 
-    // Special construction logic ...
+    // Special buildion logic ...
 
     // ...
 
@@ -215,7 +245,7 @@ $container->set(SomeInterface::class, function () {
 });
 
 // Decorate the container.
-$decorated = ReflectionContainer::decorate($container);
+$decorated = new ReflectionContainer($container);
 
 // Get a specific instance of ServerRequestInterface.
 $request = get_request_from_somewhere();
