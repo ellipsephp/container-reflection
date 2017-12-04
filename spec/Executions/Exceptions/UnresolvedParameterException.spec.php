@@ -8,17 +8,13 @@ use Ellipse\Container\Executions\Exceptions\UnresolvedParameterException;
 
 describe('UnresolvedParameterException', function () {
 
-    beforeEach(function () {
+    it('should implement ContainerExceptionInterface', function () {
 
         $reflection = mock(ReflectionParameter::class)->get();
 
-        $this->exception = new UnresolvedParameterException($reflection);
+        $test = new UnresolvedParameterException($reflection);
 
-    });
-
-    it('should implement ContainerExceptionInterface', function () {
-
-        expect($this->exception)->toBeAnInstanceOf(ContainerExceptionInterface::class);
+        expect($test)->toBeAnInstanceOf(ContainerExceptionInterface::class);
 
     });
 
