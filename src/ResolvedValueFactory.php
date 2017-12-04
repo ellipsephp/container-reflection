@@ -19,15 +19,9 @@ class ResolvedValueFactory
     public function __construct(ReflectionContainer $container, array $overrides)
     {
         $this->delegate = new ExecutionWithTypeHint(
-            new ExecutionWithOverriddenTypeHint(
-                $this,
-                $overrides,
-                new ExecutionWithClassTypeHint(
-                    $this,
-                    $container,
-                    $overrides
-                )
-            ),
+            $this,
+            $container,
+            $overrides,
             new ExecutionWithPlaceholder(
                 $this,
                 new ExecutionWithDefaultValue(

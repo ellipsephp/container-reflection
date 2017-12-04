@@ -7,16 +7,29 @@ use ReflectionParameter;
 use Ellipse\Container\ReflectionContainer;
 use Ellipse\Container\ResolvedValueFactory;
 use Ellipse\Container\PartiallyResolvedValue;
-use Ellipse\Container\Executions\TypeHinted\ExecutionWithTypeHintInterface;
 
 class ExecutionWithTypeHint implements ExecutionInterface
 {
     /**
-     * The type hinted execution.
+     * The resolved value factory.
      *
-     * @var \Ellipse\Container\Executions\TypeHinted\ExecutionWithTypeHintInterface
+     * @var \Ellipse\Container\ResolvedValueFactory
      */
-    private $execution;
+    private $factory;
+
+    /**
+     * The reflection container.
+     *
+     * @var \Ellipse\Container\ReflectionContainer
+     */
+    private $container;
+
+    /**
+     * The associative array of overrides.
+     *
+     * @var array
+     */
+    private $overrides;
 
     /**
      * The delegate.
@@ -26,15 +39,23 @@ class ExecutionWithTypeHint implements ExecutionInterface
     private $delegate;
 
     /**
-     * Set up an execution with type hint using the given type hinted execution
-     * and delegate.
+     * Set up an execution with contained type hint using the given resolved
+     * value factory, reflection container, overrides and delegate.
      *
-     * @param \Ellipse\Container\Executions\TypeHinted\ExecutionWithTypeHintInterface   $execution
-     * @param \Ellipse\Container\Executions\ExecutionInterface                          $delegate
+     * @param \Ellipse\Container\ResolvedValueFactory           $factory
+     * @param \Ellipse\Container\ReflectionContainer            $container
+     * @param array                                             $overrides
+     * @param \Ellipse\Container\Executions\ExecutionInterface  $delegate
      */
-    public function __construct(ExecutionWithTypeHintInterface $execution, ExecutionInterface $delegate)
-    {
-        $this->execution = $execution;
+    public function __construct(
+        ResolvedValueFactory $factory,
+        ReflectionContainer $container,
+        array $overrides,
+        ExecutionInterface $delegate
+    ) {
+        $this->factory = $factory;
+        $this->container = $container;
+        $this->overrides = $overrides;
         $this->delegate = $delegate;
     }
 
@@ -47,7 +68,11 @@ class ExecutionWithTypeHint implements ExecutionInterface
 
             $name = $class->getName();
 
-            return ($this->execution)($factory, $name, $tail, $placeholders);
+            $value = array_key_exists($name, $this->overrides)
+                ? $this->overrides[$name]
+                : $this->container->make($name, $this->overrides);
+
+            return ($this->factory)(new PartiallyResolvedValue($factory, $value), $tail, $placeholders);
 
         }
 
