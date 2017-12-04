@@ -4,15 +4,13 @@ use function Eloquent\Phony\Kahlan\mock;
 
 use Psr\Container\ContainerExceptionInterface;
 
-use Ellipse\Container\Executions\Exceptions\UnresolvedParameterException;
+use Ellipse\Container\Executions\Exceptions\UnresolvedValueException;
 
-describe('UnresolvedParameterException', function () {
+describe('UnresolvedValueException', function () {
 
     it('should implement ContainerExceptionInterface', function () {
 
-        $reflection = mock(ReflectionParameter::class)->get();
-
-        $test = new UnresolvedParameterException($reflection);
+        $test = new UnresolvedValueException;
 
         expect($test)->toBeAnInstanceOf(ContainerExceptionInterface::class);
 

@@ -4,6 +4,10 @@ namespace Ellipse\Container;
 
 use Psr\Container\ContainerInterface;
 
+use Ellipse\Container\Exceptions\ClassInstantiationException;
+use Ellipse\Container\Exceptions\CallableExecutionException;
+use Ellipse\Container\Exceptions\UnresolvedParameterException;
+
 class ReflectionContainer implements ContainerInterface
 {
     /**
@@ -64,12 +68,23 @@ class ReflectionContainer implements ContainerInterface
      * @param array     $overrides
      * @param array     $placeholders
      * @return mixed
+     * @throws \Ellipse\Container\Exceptions\ClassInstantiationException
      */
     public function make(string $class, array $overrides = [], array $placeholders = [])
     {
         if (! $this->delegate->has($class)) {
 
-            return ($this->class)($class)->value($this, $overrides, $placeholders);
+            try {
+
+                return ($this->class)($class)->value($this, $overrides, $placeholders);
+
+            }
+
+            catch (UnresolvedParameterException $e) {
+
+                throw new ClassInstantiationException($class, $e);
+
+            }
 
         }
 
@@ -84,9 +99,20 @@ class ReflectionContainer implements ContainerInterface
      * @param array     $overrides
      * @param array     $placeholders
      * @return mixed
+     * @throws \Ellipse\Container\Exceptions\CallableExecutionException
      */
     public function call(callable $callable, array $overrides = [], array $defaults = [])
     {
-        return ($this->callable)($callable)->value($this, $overrides, $defaults);
+        try {
+
+            return ($this->callable)($callable)->value($this, $overrides, $defaults);
+
+        }
+
+        catch (UnresolvedParameterException $e) {
+
+            throw new CallableExecutionException($callable, $e);
+
+        }
     }
 }

@@ -9,6 +9,9 @@ use Ellipse\Container\ReflectionContainer;
 use Ellipse\Container\ResolvableClassFactory;
 use Ellipse\Container\ResolvableCallableFactory;
 use Ellipse\Container\ResolvableValue;
+use Ellipse\Container\Exceptions\ClassInstantiationException;
+use Ellipse\Container\Exceptions\CallableExecutionException;
+use Ellipse\Container\Exceptions\UnresolvedParameterException;
 
 describe('ReflectionContainer', function () {
 
@@ -100,24 +103,58 @@ describe('ReflectionContainer', function () {
 
         context('when the given class name is not contained in the delegate', function () {
 
-            it('should use the resolvable class factory to produce a resolvable value and proxy its ->value() method', function () {
+            beforeEach(function () {
 
                 $this->delegate->has->with('class')->returns(false);
 
-                $overrides = ['overridden' => new class () {}];
-                $placeholders = ['p1', 'p2'];
+                $this->overrides = ['overridden' => new class () {}];
+                $this->placeholders = ['p1', 'p2'];
 
-                $instance = new class () {};
+                $this->resolvable = mock(ResolvableValue::class);
 
-                $resolvable = mock(ResolvableValue::class);
+                $this->class->__invoke->with('class')->returns($this->resolvable);
 
-                $this->class->__invoke->with('class')->returns($resolvable);
+            });
 
-                $resolvable->value->with($this->container, $overrides, $placeholders)->returns($instance);
+            context('when no UnresolvedParameterException is thrown', function () {
 
-                $test = $this->container->make('class', $overrides, $placeholders);
+                it('should use the resolvable class factory to produce a resolvable value and proxy its ->value() method', function () {
 
-                expect($test)->toBe($instance);
+                    $instance = new class () {};
+
+                    $this->resolvable->value
+                        ->with($this->container, $this->overrides, $this->placeholders)
+                        ->returns($instance);
+
+                    $test = $this->container->make('class', $this->overrides, $this->placeholders);
+
+                    expect($test)->toBe($instance);
+
+                });
+
+            });
+
+            context('when a UnresolvedParameterException is thrown', function () {
+
+                it('should wrap it into a ClassInstantiationException', function () {
+
+                    $exception = mock(UnresolvedParameterException::class)->get();
+
+                    $this->resolvable->value
+                        ->with($this->container, $this->overrides, $this->placeholders)
+                        ->throws($exception);
+
+                    $test = function () {
+
+                        $this->container->make('class', $this->overrides, $this->placeholders);
+
+                    };
+
+                    $exception = new ClassInstantiationException('class', $exception);
+
+                    expect($test)->toThrow($exception);
+
+                });
 
             });
 
@@ -127,22 +164,122 @@ describe('ReflectionContainer', function () {
 
     describe('->call()', function () {
 
-        it('should use the resolvable callable factory to produce a resolvable value and proxy its->value() method', function () {
+        beforeEach(function () {
 
-            $overrides = ['overridden' => new class () {}];
-            $placeholders = ['p1', 'p2'];
+            $this->overrides = ['overridden' => new class () {}];
+            $this->placeholders = ['p1', 'p2'];
 
-            $callable = stub();
+            $this->resolvable = mock(ResolvableValue::class);
 
-            $resolvable = mock(ResolvableValue::class);
+        });
 
-            $this->callable->__invoke->with($callable)->returns($resolvable);
+        context('when no UnresolvedParameterException is thrown', function () {
 
-            $resolvable->value->with($this->container, $overrides, $placeholders)->returns('value');
+            it('should use the resolvable callable factory to produce a resolvable value and proxy its ->value() method', function () {
 
-            $test = $this->container->call($callable, $overrides, $placeholders);
+                $callable = stub();
 
-            expect($test)->toEqual('value');
+                $this->callable->__invoke->with($callable)->returns($this->resolvable);
+
+                $this->resolvable->value
+                    ->with($this->container, $this->overrides, $this->placeholders)
+                    ->returns('value');
+
+                $test = $this->container->call($callable, $this->overrides, $this->placeholders);
+
+                expect($test)->toEqual('value');
+
+            });
+
+        });
+
+        context('when a UnresolvedParameterException is thrown', function () {
+
+            it('should wrap it into a CallableExecutionException', function () {
+
+                $callable = stub();
+
+                $exception = mock(UnresolvedParameterException::class)->get();
+
+                $this->callable->__invoke->with($callable)->returns($this->resolvable);
+
+                $this->resolvable->value
+                    ->with($this->container, $this->overrides, $this->placeholders)
+                    ->throws($exception);
+
+                $test = function () use ($callable) {
+
+                    $this->container->call($callable, $this->overrides, $this->placeholders);
+
+                };
+
+                $exception = new CallableExecutionException($callable, $exception);
+
+                expect($test)->toThrow($exception);
+
+            });
+
+        });
+
+    });
+
+});
+
+describe('ReflectionContainer', function () {
+
+    beforeAll(function () {
+
+        class TestClass1 {}
+
+        class TestClass2 {
+
+            public function __construct(TestClass3 $class) {}
+
+        }
+
+        class TestClass3 {}
+
+    });
+
+    beforeEach(function () {
+
+        $this->container = mock(ContainerInterface::class);
+
+        $this->reflection = new ReflectionContainer($this->container->get());
+
+    });
+
+    describe('->make()', function () {
+
+        it('should create an instance of the class with the resolved parameters', function () {
+
+            $test = $this->reflection->make(TestClass2::class);
+
+            expect($test)->toBeAnInstanceOf(TestClass2::class);
+
+        });
+
+    });
+
+    describe('->call()', function () {
+
+        it('should call the given callable with the resolved parameters', function () {
+
+            $callable = function (TestClass1 $p1, TestClass2 $p2, int $p3 = 0, int $p4, array $p5 = []) {
+
+                return [$p1, $p2, $p3, $p4, $p5];
+
+            };
+
+            $instance = new TestClass1;
+
+            $test = $this->reflection->call($callable, [TestClass1::class => $instance], [1, 2]);
+
+            expect($test[0])->toBe($instance);
+            expect($test[1])->toBeAnInstanceOf(TestClass2::class);
+            expect($test[2])->toEqual(1);
+            expect($test[3])->toEqual(2);
+            expect($test[4])->toEqual([]);
 
         });
 

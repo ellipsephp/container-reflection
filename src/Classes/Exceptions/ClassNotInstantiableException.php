@@ -10,7 +10,7 @@ class ClassNotInstantiableException extends RuntimeException implements Containe
 {
     public function __construct(string $class)
     {
-        $msg = "Class '%s' is not instantiable (interface or abstract).";
+        $msg = "The class '%s' is not instantiable (interface or abstract).";
 
         parent::__construct(sprintf($msg, $class));
     }
