@@ -3,44 +3,44 @@
 namespace Ellipse\Container;
 
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
-use Ellipse\Container\Exceptions\ClassInstantiationException;
-use Ellipse\Container\Exceptions\CallableExecutionException;
-use Ellipse\Container\Exceptions\UnresolvedParameterException;
+use Ellipse\Resolvable\ResolvableClassFactory;
+use Ellipse\Resolvable\Classes\Exceptions\ClassNotFoundException;
 
 class ReflectionContainer implements ContainerInterface
 {
     /**
-     * The underlying container to decorate.
+     * The delegate.
      *
      * @var \Psr\Container\ContainerInterface
      */
-    private $container;
+    private $delegate;
 
     /**
      * The resolvable class factory.
      *
-     * @var \Ellipse\Container\ResolvableClassFactory
+     * @var \Ellipse\Resolvable\ResolvableClassFactory
      */
-    private $class;
+    private $factory;
 
     /**
-     * The resolvable callable factory.
+     * The resolved instances cache.
      *
-     * @var \Ellipse\Container\ResolvableCallableFactory
+     * @var array
      */
-    private $callable;
+    private $instances;
 
     /**
      * Set up a reflection container with the given delegate.
      *
-     * @param \Psr\Container\ContainerInterface $container
+     * @param \Psr\Container\ContainerInterface $delegate
      */
-    public function __construct(ContainerInterface $container)
+    public function __construct(ContainerInterface $delegate)
     {
-        $this->delegate = $container;
-        $this->class = new ResolvableClassFactory;
-        $this->callable = new ResolvableCallableFactory;
+        $this->delegate = $delegate;
+        $this->factory = new ResolvableClassFactory;
+        $this->instances = [];
     }
 
     /**
@@ -48,7 +48,17 @@ class ReflectionContainer implements ContainerInterface
      */
     public function get($id)
     {
-        return $this->delegate->get($id);
+        try {
+
+            return $this->delegate->get($id);
+
+        }
+
+        catch (NotFoundExceptionInterface $e) {
+
+            return $this->make($id, $e);
+
+        }
     }
 
     /**
@@ -56,63 +66,36 @@ class ReflectionContainer implements ContainerInterface
      */
     public function has($id)
     {
-        return $this->delegate->has($id);
+        return $this->delegate->has($id) ?: class_exists($id);
     }
 
     /**
-     * Return the instance contained in the delegate when present. Otherwise
-     * build a resolvable class and resolve its value with the given overrides
-     * and placeholders.
+     * Return an instance of the given class name. When not an existing class,
+     * propagate the original not found exception. Cache the created instance so
+     * the same one is returned on multiple calls.
      *
-     * @param string    $class
-     * @param array     $overrides
-     * @param array     $placeholders
-     * @return mixed
-     * @throws \Ellipse\Container\Exceptions\ClassInstantiationException
+     * @param string                                        $class
+     * @param \Psr\Container\NeotFoundExceptionInterface    $notfound
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function make(string $class, array $overrides = [], array $placeholders = [])
+    private function make(string $id, NotFoundExceptionInterface $notfound)
     {
-        if (! $this->delegate->has($class)) {
+        if (! array_key_exists($id, $this->instances)) {
 
             try {
 
-                return ($this->class)($class)->value($this, $overrides, $placeholders);
+                return $this->instances[$id] = ($this->factory)($id)->value($this);
 
             }
 
-            catch (UnresolvedParameterException $e) {
+            catch (ClassNotFoundException $e) {
 
-                throw new ClassInstantiationException($class, $e);
+                throw $notfound;
 
             }
 
         }
 
-        return $this->delegate->get($class);
-    }
-
-    /**
-     * Return the value produced by the given callable by resolving its
-     * parameters using the given overrides and placeholders.
-     *
-     * @param callable  $callable
-     * @param array     $overrides
-     * @param array     $placeholders
-     * @return mixed
-     * @throws \Ellipse\Container\Exceptions\CallableExecutionException
-     */
-    public function call(callable $callable, array $overrides = [], array $defaults = [])
-    {
-        try {
-
-            return ($this->callable)($callable)->value($this, $overrides, $defaults);
-
-        }
-
-        catch (UnresolvedParameterException $e) {
-
-            throw new CallableExecutionException($callable, $e);
-
-        }
+        return $this->instances[$id];
     }
 }
