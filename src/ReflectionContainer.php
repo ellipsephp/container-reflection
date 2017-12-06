@@ -7,6 +7,7 @@ use Psr\Container\NotFoundExceptionInterface;
 
 use Ellipse\Resolvable\ResolvableClassFactory;
 use Ellipse\Resolvable\Classes\Exceptions\ClassNotFoundException;
+use Ellipse\Resolvable\Classes\Exceptions\InterfaceNameException;
 
 class ReflectionContainer implements ContainerInterface
 {
@@ -78,17 +79,17 @@ class ReflectionContainer implements ContainerInterface
      * @param \Psr\Container\NeotFoundExceptionInterface    $notfound
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    private function make(string $id, NotFoundExceptionInterface $notfound)
+    private function make(string $class, NotFoundExceptionInterface $notfound)
     {
-        if (! array_key_exists($id, $this->instances)) {
+        if (! array_key_exists($class, $this->instances)) {
 
             try {
 
-                return $this->instances[$id] = ($this->factory)($id)->value($this);
+                return $this->instances[$class] = ($this->factory)($class)->value($this);
 
             }
 
-            catch (ClassNotFoundException $e) {
+            catch (ClassNotFoundException | InterfaceNameException $e) {
 
                 throw $notfound;
 
@@ -96,6 +97,6 @@ class ReflectionContainer implements ContainerInterface
 
         }
 
-        return $this->instances[$id];
+        return $this->instances[$class];
     }
 }

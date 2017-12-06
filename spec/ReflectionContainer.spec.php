@@ -9,6 +9,7 @@ use Ellipse\Container\ReflectionContainer;
 use Ellipse\Resolvable\ResolvableClassFactory;
 use Ellipse\Resolvable\ResolvableClass;
 use Ellipse\Resolvable\Classes\Exceptions\ClassNotFoundException;
+use Ellipse\Resolvable\Classes\Exceptions\InterfaceNameException;
 
 describe('ReflectionContainer', function () {
 
@@ -51,13 +52,13 @@ describe('ReflectionContainer', function () {
 
             beforeEach(function () {
 
-                $this->notfound = mock([Exception::class, NotFoundExceptionInterface::class])->get();
+                $this->notfound = mock([Throwable::class, NotFoundExceptionInterface::class])->get();
 
                 $this->delegate->get->with('id')->throws($this->notfound);
 
             });
 
-            context('when the resolvable class factory does not throw a ClassNotFoundException', function () {
+            context('when the resolvable class factory does not throw a ClassNotFoundException or an InterfaceNameException', function () {
 
                 beforeEach(function () {
 
@@ -91,24 +92,47 @@ describe('ReflectionContainer', function () {
 
             });
 
-            context('when the resolvable class factory throws a ClassNotFoundException', function () {
+            context('when the resolvable class factory throws a ClassNotFoundException or an InterfaceNameException', function () {
 
-                it('should throw the original not found exception', function () {
+                beforeEach(function () {
 
-                    $resolvable = mock(ResolvableClass::class);
-                    $exception = mock(ClassNotFoundException::class);
+                    $this->resolvable = mock(ResolvableClass::class);
 
-                    $this->factory->__invoke->with('id')->returns($resolvable);
+                    $this->factory->__invoke->with('id')->returns($this->resolvable);
 
-                    $resolvable->value->with($this->container)->throws($exception);
-
-                    $test = function () {
+                    $this->test = function () {
 
                         $this->container->get('id');
 
                     };
 
-                    expect($test)->toThrow($this->notfound);
+                });
+
+                context('when the resolvable class factory throws a ClassNotFoundException', function () {
+
+                    it('should throw the original not found exception', function () {
+
+                        $exception = mock(ClassNotFoundException::class);
+
+                        $this->resolvable->value->with($this->container)->throws($exception);
+
+                        expect($this->test)->toThrow($this->notfound);
+
+                    });
+
+                });
+
+                context('when the resolvable class factory throws a InterfaceNameException', function () {
+
+                    it('should throw the original not found exception', function () {
+
+                        $exception = mock(InterfaceNameException::class);
+
+                        $this->resolvable->value->with($this->container)->throws($exception);
+
+                        expect($this->test)->toThrow($this->notfound);
+
+                    });
 
                 });
 
@@ -219,7 +243,7 @@ describe('ReflectionContainer', function () {
 
             $instance = new TestClass3;
 
-            $exception = mock([Exception::class, NotFoundExceptionInterface::class])->get();
+            $exception = mock([Throwable::class, NotFoundExceptionInterface::class])->get();
 
             $this->delegate->get->with(TestClass1::class)->throws($exception);
             $this->delegate->get->with(TestClass2::class)->throws($exception);
