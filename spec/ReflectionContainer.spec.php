@@ -6,8 +6,11 @@ use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 use Ellipse\Container\ReflectionContainer;
+use Ellipse\Container\Exceptions\ReflectionContainerException;
+
 use Ellipse\Resolvable\ResolvableClassFactory;
 use Ellipse\Resolvable\ResolvableClass;
+use Ellipse\Resolvable\Exceptions\ResolvingExceptionInterface;
 use Ellipse\Resolvable\Classes\Exceptions\ClassNotFoundException;
 use Ellipse\Resolvable\Classes\Exceptions\InterfaceNameException;
 
@@ -58,7 +61,7 @@ describe('ReflectionContainer', function () {
 
             });
 
-            context('when the resolvable class factory does not throw a ClassNotFoundException or an InterfaceNameException', function () {
+            context('when the resolvable class factory does not throw an exception', function () {
 
                 beforeEach(function () {
 
@@ -92,7 +95,7 @@ describe('ReflectionContainer', function () {
 
             });
 
-            context('when the resolvable class factory throws a ClassNotFoundException or an InterfaceNameException', function () {
+            context('when the resolvable class factory throws an exception', function () {
 
                 beforeEach(function () {
 
@@ -131,6 +134,22 @@ describe('ReflectionContainer', function () {
                         $this->resolvable->value->with($this->container)->throws($exception);
 
                         expect($this->test)->toThrow($this->notfound);
+
+                    });
+
+                });
+
+                context('when the resolvable class factory throws a ResolvingExceptionInterface', function () {
+
+                    it('should be wrapped inside a ReflectionContainerException', function () {
+
+                        $exception = mock([Throwable::class, ResolvingExceptionInterface::class])->get();
+
+                        $this->resolvable->value->with($this->container)->throws($exception);
+
+                        $exception = new ReflectionContainerException('id', $exception);
+
+                        expect($this->test)->toThrow($exception);
 
                     });
 
