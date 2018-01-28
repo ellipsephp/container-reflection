@@ -4,6 +4,10 @@ namespace Ellipse\Container;
 
 use Psr\Container\ContainerInterface;
 
+use Ellipse\Resolvable\ResolvableClassFactory;
+use Ellipse\Resolvable\Classes\ClassReflectionFactory;
+use Ellipse\Resolvable\Classes\NotAbstractClassReflectionFactory;
+
 class ReflectionContainer extends AbstractReflectionContainer
 {
     /**
@@ -15,6 +19,12 @@ class ReflectionContainer extends AbstractReflectionContainer
      */
     public function __construct(ContainerInterface $delegate, array $interfaces = [])
     {
-        parent::__construct($delegate, new ResolvableClassFactory, $interfaces);
+        $factory = new ResolvableClassFactory(
+            new NotAbstractClassReflectionFactory(
+                new ClassReflectionFactory
+            )
+        );
+
+        parent::__construct($delegate, $factory, $interfaces);
     }
 }
