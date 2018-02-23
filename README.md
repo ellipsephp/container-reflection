@@ -2,7 +2,7 @@
 
 This package provides a **[Psr-11 container](http://www.php-fig.org/psr/psr-11/)** decorator enabling **auto-wiring** to any Psr-11 container implementation.
 
-**Require** php >= 7.1
+**Require** php >= 7.0
 
 **Installation** `composer require ellipse/container-reflection`
 
